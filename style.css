@@ -1,0 +1,203 @@
+/* we can use web-css variables, fabric compiles those to gtk-css.
+   global variables can be defined in the :vars selector... */
+:vars {
+    --background: #150d16;
+    --foreground: #f5dbc4;
+    --color0: #150d16;
+    --color1: #72448D;
+    --color2: #9C5995;
+    --color3: #D5719F;
+    --color4: #9A62F3;
+    --color5: #E075DF;
+    --color6: #F98F9F;
+    --color7: #f5dbc4;
+    --color8: #ab9989;
+    --color9: #72448D;
+    --color10: #9C5995;
+    --color11: #D5719F;
+    --color12: #9A62F3;
+    --color13: #E075DF;
+    --color14: #F98F9F;
+    --color15: #f5dbc4;
+    --window-bg: alpha(var(--background), 0.6);
+    --module-bg: alpha(var(--background), 0.4);
+    --border-color: var(--color11);
+    --ws-active: var(--color9);
+    --ws-inactive: var(--color3);
+    --ws-empty: var(--color8);
+    --ws-hover: var(--color1);
+    --ws-urgent: var(--color12);
+}
+
+* {
+    /* unset de forma segura para não quebrar caixas estruturais internas */
+    all: unset;
+
+    /* text color */
+    color: var(--foreground);
+    font-size: 12px;
+    font-family: "Jost*", sans-serif;
+    /* pill shape */
+    border-radius: 100px;
+}
+
+#bar-inner {
+    padding: 4px;
+    border: solid 2px;
+    border-color: transparent;
+    background-color: var(--window-bg);
+    min-height: 28px;
+}
+
+#workspaces {
+    padding: 6px;
+    min-width: 0px;
+    background-color: var(--module-bg);
+}
+
+#workspaces>button {
+    padding: 0px 8px;
+    transition: padding 0.05s steps(8);
+    background-color: var(--ws-inactive);
+}
+
+#workspaces>button>label {
+    font-size: 0px;
+}
+
+#workspaces>button:hover {
+    background-color: var(--ws-hover);
+}
+
+#workspaces>button.urgent {
+    background-color: var(--ws-urgent);
+}
+
+#workspaces>button.active {
+    padding: 0px 32px;
+    background-color: var(--ws-active);
+}
+
+#workspaces>button.empty {
+    background-color: var(--ws-empty);
+}
+
+/* --- ATUALIZAÇÃO DO SYSTEM STATUS --- */
+#system-status {
+    padding: 0px 12px;
+    background-color: var(--module-bg);
+}
+
+/* Garante que os textos e ícones fiquem alinhados corretamente */
+#system-status label,
+#system-status image {
+    font-weight: 900;
+}
+
+/* --- CORREÇÃO DO RELÓGIO (SEM PROPRIEDADES DE WEB-CSS) --- */
+#date-time {
+    background-color: var(--module-bg);
+    font-weight: 900;
+    padding: 0px 12px;
+}
+
+#date-time label {
+    font-weight: 900;
+}
+
+#hyprland-window {
+    background-color: var(--module-bg);
+    padding: 0px 12px;
+}
+
+#hyprland-window>label {
+    font-weight: 900;
+}
+
+/* system tray */
+#system-tray {
+    padding: 2px 4px;
+    background-color: var(--module-bg);
+}
+
+/* menu and menu items (written for the system tray) */
+menu {
+    border: solid 2px;
+    border-radius: 10px;
+    border-color: var(--border-color);
+    background-color: var(--window-bg);
+}
+
+menu>menuitem {
+    border-radius: 0px;
+    background-color: var(--module-bg);
+    padding: 6px;
+    margin-left: 2px;
+    margin-right: 2px;
+}
+
+menu>menuitem:first-child {
+    margin-top: 1px;
+    border-radius: 8px 8px 0px 0px;
+}
+
+menu>menuitem:last-child {
+    margin-bottom: 1px;
+    border-radius: 0px 0px 8px 8px;
+}
+
+menu>menuitem:hover {
+    background-color: var(--border-color);
+}
+
+tooltip {
+    border: solid 2px;
+    border-color: var(--border-color);
+    background-color: var(--window-bg);
+}
+
+/* Fundo do Launcher (usa a cor base da barra, mas sólida/opaca) */
+#launcher-window {
+    background-color: var(--background);
+    padding: 12px;
+    /* ALTERADO: Agora usa a cor da workspace ativa para a borda */
+    border: solid 2px var(--ws-active); 
+    border-radius: 12px;
+}
+
+/* Caixa de pesquisa do Launcher */
+#launcher-window entry {
+    background-color: var(--module-bg);
+    color: var(--foreground);
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: solid 1px transparent;
+}
+
+/* ALTERADO: Quando clicas na caixa de escrita, a borda fica com o roxo focado */
+#launcher-window entry:focus {
+    border-color: var(--ws-active);
+}
+
+/* Lista de aplicações (ScrolledWindow e Viewport) */
+#launcher-window scrolledwindow {
+    background-color: transparent;
+    margin-top: 8px;
+}
+
+/* Linhas/Botões de cada aplicação */
+#launcher-window button {
+    background-color: transparent;
+    padding: 6px 12px;
+    border-radius: 6px;
+    transition: background-color 0.15s ease;
+}
+
+/* Efeito Hover ao passar o rato nas aplicações */
+#launcher-window button:hover {
+    background-color: var(--ws-hover);
+}
+
+tooltip>* {
+    padding: 2px 4px
+}

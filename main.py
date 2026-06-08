@@ -1,11 +1,35 @@
+#!/usr/bin/env python3
 import os
+import sys
 import signal
+
+# --- TRUQUE DE COMPATIBILIDADE PARA COMPOSITORES QUE NÃO HYPRLAND ---
+# Se não detetar o socket do Hyprland, criamos classes falsas (mock) em memória
+# para enganar o 'bar.py' e não deixar a barra falhar.
+if "HYPRLAND_INSTANCE_SIGNATURE" not in os.environ:
+    from unittest.mock import MagicMock
+    
+    # Criamos um módulo falso para o fabric.hyprland.widgets e service
+    mock_module = MagicMock()
+    
+    # Fazemos com que os botões e serviços retornem apenas um componente vazio do GTK
+    from fabric.widgets.box import Box
+    mock_module.Hyprland = MagicMock
+    mock_module.HyprlandWorkspaces = lambda **kwargs: Box(name="workspaces-placeholder")
+    mock_module.WorkspaceButton = lambda **kwargs: Box()
+    
+    # Injetamos o mock no sistema do Python para evitar erros de importação
+    sys.modules["fabric.hyprland.widgets"] = mock_module
+    sys.modules["fabric.hyprland.service"] = mock_module
+    
+    print("[Aviso] Socket do Hyprland não detetado. A emular ambiente para MangoWC...")
+
+# --- AGORA PODEMOS IMPORTAR O RESTO SEM MEDO DE CRASHES ---
 from fabric import Application
 from fabric.widgets.button import Button
 from fabric.widgets.image import Image
 from fabric.utils import get_relative_path
 
-# Importamos as classes originais dos teus ficheiros
 from bar import StatusBar
 from launcher import AppLauncher
 
@@ -29,41 +53,29 @@ class MainStatusBar(StatusBar):
             current_children.insert(0, launcher_button)
             left_container.children = current_children
 
-        # 3. Executa o comportamento normal de exibição da barra
         return super().show_all()
 
     def toggle_launcher(self):
         if self.launcher.get_visible():
             self.launcher.set_visible(False)
         else:
-            # 1. Primeiro redesenhamos os componentes internos do launcher
             self.launcher.show_all()
-            # 2. Forçamos a atualização da lista de aplicações
             self.launcher.refresh_apps()
-            # 3. Tornamos a janela visível e damos foco
             self.launcher.set_visible(True)
             self.launcher.search_entry.grab_focus()
 
 
 if __name__ == "__main__":
-    # 1. Inicializa o Launcher
     launcher = AppLauncher()
-    
-    # Garante que inicia escondido
     launcher.set_visible(False)
     
-    # Substitui o atalho de Escape do launcher para APENAS ESCONDER
     launcher.add_keybinding("escape", lambda: launcher.set_visible(False))
     
-    # 2. Inicializa a Barra passando a referência do launcher
     bar = MainStatusBar(launcher_window=launcher)
-
-    # 3. Cria a aplicação unificada carregando os estilos
-    app = Application("d77-shell", [bar, launcher])
-
-    signal.signal(signal.SIGUSR1, lambda signum, frame: bar.toggle_launcher())    
-
-    # Carrega o teu estilo CSS existente
+    app = Application("desktop-shell", [bar, launcher])
+    
+    signal.signal(signal.SIGUSR1, lambda signum, frame: bar.toggle_launcher())
+    
     style_path = get_relative_path("./style.css")
     if os.path.exists(style_path):
         app.set_stylesheet_from_file(style_path)

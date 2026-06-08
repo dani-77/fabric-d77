@@ -76,7 +76,6 @@ def get_wifi_details():
     return "Disconnected"
 
 
-# --- FUNÇÃO ATUALIZADA PARA INCLUIR O TEMPO RESTANTE DE CARGA/DESCARGA ---
 def get_battery_info():
     try:
         bat_dir = "/sys/class/power_supply/BAT0"
@@ -112,7 +111,6 @@ def get_battery_info():
                 if percent > 25: icon = "battery-good-symbolic"
                 else: icon = "battery-caution-symbolic"
                 
-            # Retorna ex: "85% (2h 15m)" ou apenas "100%" se estiver cheio
             return icon, f"{percent}%{time_str}"
             
     except Exception:
@@ -134,7 +132,6 @@ class StatusBar(Window):
 
         self.hyprland = Hyprland()
 
-        # 1. CPU
         cpu_icon = Image(icon_name="cpu-symbolic", icon_size=14)
         cpu_label = Label(name="cpu-label", label="0%")
         cpu_box = Box(spacing=4, orientation="h", children=[cpu_icon, cpu_label])
@@ -146,7 +143,6 @@ class StatusBar(Window):
             )
         )
 
-        # 2. RAM
         ram_icon = Image(icon_name="ram-symbolic", icon_size=14)
         ram_label = Label(name="ram-label", label="0%")
         ram_box = Box(spacing=4, orientation="h", children=[ram_icon, ram_label])
@@ -158,7 +154,6 @@ class StatusBar(Window):
             )
         )
 
-        # 3. Wi-Fi
         wifi_icon = Image(icon_name="network-wireless-symbolic", icon_size=14)
         wifi_label = Label(name="wifi-label", label="--")
         wifi_box = Box(spacing=4, orientation="h", children=[wifi_icon, wifi_label])
@@ -170,7 +165,6 @@ class StatusBar(Window):
             )
         )
 
-        # 4. Bateria (Atualiza a cada 5 segundos)
         battery_icon = Image(icon_name="battery-full-symbolic", icon_size=14)
         battery_label = Label(name="battery-label", label="--%")
         battery_box = Box(spacing=4, orientation="h", children=[battery_icon, battery_label])
@@ -188,7 +182,6 @@ class StatusBar(Window):
             )
         )
 
-        # Relógio
         clock_label = Label(name="date-time")
         clock_label.build(
             lambda lbl: Fabricator(
@@ -198,7 +191,6 @@ class StatusBar(Window):
             )
         )
 
-        # Status do sistema
         self.system_status = Box(
             name="system-status",
             spacing=14, 
@@ -217,7 +209,6 @@ class StatusBar(Window):
             btn.connect("clicked", lambda _: self.hyprland.send_command(f"dispatch workspace {ws_id}"))
             return btn
 
-        # Bloco Esquerdo (Workspaces)
         left_container = Box(
             name="start-container",
             children=HyprlandWorkspaces(
@@ -227,11 +218,9 @@ class StatusBar(Window):
             ),
         )
 
-        # Espaçador dinâmico invisível
         spacer = Box()
         spacer.set_hexpand(True)
 
-        # Bloco Direito (Tray, Status, Relógio)
         right_container = Box(
             name="end-container",
             spacing=12,
@@ -243,7 +232,6 @@ class StatusBar(Window):
             ],
         )
 
-        # Montagem final da barra
         self.main_layout = Box(
             name="bar-inner",
             orientation="h",

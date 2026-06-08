@@ -44,7 +44,6 @@ class AppLauncher(Window):
                 orientation="v",
                 style="margin: 2px",
                 children=[
-                    # o cabeçalho com a barra de pesquisa
                     Box(
                         spacing=2,
                         orientation="h",
@@ -57,13 +56,10 @@ class AppLauncher(Window):
                             ),
                         ],
                     ),
-                    # o contentor de aplicações real
                     self.scrolled_window,
                 ],
             )
         )
-        # --- ALTERADO AQUI ---
-        # Em vez de fechar a app, o Escape agora apenas esconde o launcher
         self.add_keybinding("escape", lambda: self.set_visible(False))
         self.show_all()
 

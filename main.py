@@ -3,28 +3,21 @@ import os
 import sys
 import signal
 
-# --- TRUQUE DE COMPATIBILIDADE PARA COMPOSITORES QUE NÃO HYPRLAND ---
-# Se não detetar o socket do Hyprland, criamos classes falsas (mock) em memória
-# para enganar o 'bar.py' e não deixar a barra falhar.
 if "HYPRLAND_INSTANCE_SIGNATURE" not in os.environ:
     from unittest.mock import MagicMock
     
-    # Criamos um módulo falso para o fabric.hyprland.widgets e service
     mock_module = MagicMock()
     
-    # Fazemos com que os botões e serviços retornem apenas um componente vazio do GTK
     from fabric.widgets.box import Box
     mock_module.Hyprland = MagicMock
     mock_module.HyprlandWorkspaces = lambda **kwargs: Box(name="workspaces-placeholder")
     mock_module.WorkspaceButton = lambda **kwargs: Box()
     
-    # Injetamos o mock no sistema do Python para evitar erros de importação
     sys.modules["fabric.hyprland.widgets"] = mock_module
     sys.modules["fabric.hyprland.service"] = mock_module
     
     print("[Aviso] Socket do Hyprland não detetado. A emular ambiente para MangoWC...")
 
-# --- AGORA PODEMOS IMPORTAR O RESTO SEM MEDO DE CRASHES ---
 from fabric import Application
 from fabric.widgets.button import Button
 from fabric.widgets.image import Image
@@ -39,14 +32,12 @@ class MainStatusBar(StatusBar):
         super().__init__()
 
     def show_all(self):
-        # 1. Criamos o botão do Launcher
         launcher_button = Button(
             name="launcher-button",
             child=Image(icon_name="view-app-grid-symbolic", icon_size=14),
             on_clicked=lambda *_: self.toggle_launcher(),
         )
 
-        # 2. Injetamos o botão no início do left_container
         if hasattr(self, "main_layout") and len(self.main_layout.children) > 0:
             left_container = self.main_layout.children[0]
             current_children = left_container.children

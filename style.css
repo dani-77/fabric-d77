@@ -30,7 +30,6 @@
 }
 
 * {
-    /* unset de forma segura para não quebrar caixas estruturais internas */
     all: unset;
 
     /* text color */
@@ -82,19 +81,16 @@
     background-color: var(--ws-empty);
 }
 
-/* --- ATUALIZAÇÃO DO SYSTEM STATUS --- */
 #system-status {
     padding: 0px 12px;
     background-color: var(--module-bg);
 }
 
-/* Garante que os textos e ícones fiquem alinhados corretamente */
 #system-status label,
 #system-status image {
     font-weight: 900;
 }
 
-/* --- CORREÇÃO DO RELÓGIO (SEM PROPRIEDADES DE WEB-CSS) --- */
 #date-time {
     background-color: var(--module-bg);
     font-weight: 900;
@@ -120,7 +116,6 @@
     background-color: var(--module-bg);
 }
 
-/* menu and menu items (written for the system tray) */
 menu {
     border: solid 2px;
     border-radius: 10px;
@@ -156,16 +151,13 @@ tooltip {
     background-color: var(--window-bg);
 }
 
-/* Fundo do Launcher (usa a cor base da barra, mas sólida/opaca) */
 #launcher-window {
     background-color: var(--background);
     padding: 12px;
-    /* ALTERADO: Agora usa a cor da workspace ativa para a borda */
     border: solid 2px var(--ws-active); 
     border-radius: 12px;
 }
 
-/* Caixa de pesquisa do Launcher */
 #launcher-window entry {
     background-color: var(--module-bg);
     color: var(--foreground);
@@ -174,18 +166,15 @@ tooltip {
     border: solid 1px transparent;
 }
 
-/* ALTERADO: Quando clicas na caixa de escrita, a borda fica com o roxo focado */
 #launcher-window entry:focus {
     border-color: var(--ws-active);
 }
 
-/* Lista de aplicações (ScrolledWindow e Viewport) */
 #launcher-window scrolledwindow {
     background-color: transparent;
     margin-top: 8px;
 }
 
-/* Linhas/Botões de cada aplicação */
 #launcher-window button {
     background-color: transparent;
     padding: 6px 12px;
@@ -193,7 +182,6 @@ tooltip {
     transition: background-color 0.15s ease;
 }
 
-/* Efeito Hover ao passar o rato nas aplicações */
 #launcher-window button:hover {
     background-color: var(--ws-hover);
 }

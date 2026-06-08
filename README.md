@@ -1,6 +1,6 @@
 # fabric-d77
 
-d77-shell is a simple GTK-based desktop shell built on top of Fabric and Python.
+d77-shell is a simple GTK desktop shell built on top of Fabric and Python.
 
 To install:
 

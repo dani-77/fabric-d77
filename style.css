@@ -158,6 +158,11 @@ tooltip {
     border: solid 1px transparent;
 }
 
+#launcher-button:hover {
+    background-color: var(--ws-hover);
+    border-color: var(--color6);
+}
+
 #launcher-window {
     background-color: var(--background);
     padding: 12px;

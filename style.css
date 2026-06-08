@@ -151,6 +151,13 @@ tooltip {
     background-color: var(--window-bg);
 }
 
+#launcher-button {
+    padding: 0px 10px;
+    background-color: var(--module-bg);
+    color: var(--color6);
+    border: solid 1px transparent;
+}
+
 #launcher-window {
     background-color: var(--background);
     padding: 12px;
@@ -176,14 +183,49 @@ tooltip {
 }
 
 #launcher-window button {
-    background-color: transparent;
-    padding: 6px 12px;
-    border-radius: 6px;
-    transition: background-color 0.15s ease;
+    padding: 0px 10px;
+    background-color: var(--module-bg);
+    color: var(--color6);
+    border: solid 1px transparent;
 }
 
 #launcher-window button:hover {
     background-color: var(--ws-hover);
+    border-color: var(--color6);
+}
+
+#power-button {
+    padding: 0px 10px;
+    background-color: var(--module-bg);
+    color: var(--color6);
+    border: solid 1px transparent;
+}
+
+#power-button:hover {
+    background-color: var(--ws-hover);
+    border-color: var(--color6);
+}
+
+#session-menu {
+    border: solid 2px var(--border-color);
+    border-radius: 10px;
+    background-color: var(--background);
+    padding: 4px;
+}
+
+#session-menu menuitem {
+    padding: 6px 12px;
+    border-radius: 6px;
+    color: var(--foreground);
+}
+
+#session-menu menuitem:hover {
+    background-color: var(--color1);
+}
+
+#session-menu label, 
+#session-menu image {
+    color: var(--foreground);
 }
 
 tooltip>* {

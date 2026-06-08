@@ -83,7 +83,6 @@ def get_battery_info():
             bat_dir = "/sys/class/power_supply/BAT1"
             
         if os.path.exists(bat_dir):
-            # 1. Ler a percentagem
             with open(f"{bat_dir}/capacity", "r") as f:
                 percent = int(f.read().strip())
             

@@ -100,7 +100,7 @@ if __name__ == "__main__":
     launcher.add_keybinding("escape", lambda: launcher.set_visible(False))
     
     bar = MainStatusBar(launcher_window=launcher)
-    app = Application("desktop-shell", [bar, launcher])
+    app = Application("d77-shell", [bar, launcher])
     
     signal.signal(signal.SIGUSR1, lambda signum, frame: bar.toggle_launcher())
     signal.signal(signal.SIGUSR2, lambda signum, frame: bar.popup_power_menu())

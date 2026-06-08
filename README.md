@@ -2,6 +2,8 @@
 
 d77-shell is a simple GTK desktop shell built on top of Fabric and Python.
 
+![sample](sample.png)
+
 To install:
 
 1 - Clone the Repository

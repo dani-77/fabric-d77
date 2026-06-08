@@ -52,7 +52,7 @@ class AppLauncher(Window):
                             Button(
                                 image=Image(icon_name="window-close"),
                                 tooltip_text="Exit",
-                                on_clicked=lambda *_: self.set_visible(False), # Alinhado para apenas fechar o launcher
+                                on_clicked=lambda *_: self.set_visible(False),
                             ),
                         ],
                     ),

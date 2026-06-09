@@ -225,7 +225,7 @@ tooltip {
     background-color: var(--ws-hover);
     border-color: var(--color6);
     outline-style: solid;
-    outline-width: 2px;
+    outline-width: 0px;
     outline-color: var(--color6);
     outline-offset: -2px;
 }

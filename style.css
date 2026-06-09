@@ -178,8 +178,24 @@ tooltip {
     border: solid 1px transparent;
 }
 
+/* keyboard / mouse focus on the search entry.
+   ":focus" works on GTK3 (what fabric uses); ":focus-visible" is kept in a
+   separate rule so GTK4 setups also get the indicator without dropping the
+   valid ":focus" rule if the parser ignores the GTK4-only pseudo-class. */
 #launcher-window entry:focus {
     border-color: var(--ws-active);
+    outline-style: solid;
+    outline-width: 2px;
+    outline-color: var(--ws-active);
+    outline-offset: -2px;
+}
+
+#launcher-window entry:focus-visible {
+    border-color: var(--ws-active);
+    outline-style: solid;
+    outline-width: 2px;
+    outline-color: var(--ws-active);
+    outline-offset: -2px;
 }
 
 #launcher-window scrolledwindow {
@@ -197,6 +213,30 @@ tooltip {
 #launcher-window button:hover {
     background-color: var(--ws-hover);
     border-color: var(--color6);
+}
+
+/* keyboard focus indicators for the launcher buttons (app slots + exit).
+   The global "* { all: unset; }" rule strips GTK's default focus ring, so
+   without these rules keyboard navigation showed no visible focus while the
+   mouse still got ":hover" feedback. We mirror the hover look and add a
+   clear outline. ":focus" covers GTK3 (fabric's toolkit); ":focus-visible"
+   is in its own rule for GTK4 so an unknown pseudo-class can't drop ":focus". */
+#launcher-window button:focus {
+    background-color: var(--ws-hover);
+    border-color: var(--color6);
+    outline-style: solid;
+    outline-width: 2px;
+    outline-color: var(--color6);
+    outline-offset: -2px;
+}
+
+#launcher-window button:focus-visible {
+    background-color: var(--ws-hover);
+    border-color: var(--color6);
+    outline-style: solid;
+    outline-width: 2px;
+    outline-color: var(--color6);
+    outline-offset: -2px;
 }
 
 #power-button {

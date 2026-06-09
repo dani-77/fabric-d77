@@ -39,6 +39,9 @@ class SessionMenu(Window):
                 spacing=4,
                 children=[
                     self.bake_item(
+                        "Lock", "system-lock-screen-symbolic", "hyprlock"
+                    ),
+                    self.bake_item(
                         "Log Out", "system-log-out-symbolic", logout_cmd
                     ),
                     self.bake_item(

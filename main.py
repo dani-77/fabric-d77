@@ -17,14 +17,14 @@ from fabric.widgets.button import Button
 from fabric.widgets.image import Image
 from fabric.utils import get_relative_path
 
-from gi.repository import Gtk
-
 from bar import StatusBar
 from launcher import AppLauncher
+from session_menu import SessionMenu
 
 class MainStatusBar(StatusBar):
-    def __init__(self, launcher_window: AppLauncher):
+    def __init__(self, launcher_window: AppLauncher, session_menu: SessionMenu):
         self.launcher = launcher_window
+        self.session_menu = session_menu
         super().__init__()
 
     def show_all(self):
@@ -53,34 +53,10 @@ class MainStatusBar(StatusBar):
         return super().show_all()
 
     def popup_power_menu(self, button=None):
-        target_widget = button if button else getattr(self, "power_button", None)
-        if not target_widget:
-            return
-
-        menu = Gtk.Menu()
-        menu.set_name("session-menu")
-
-        def create_item(label_text, icon_name, command):
-            item = Gtk.MenuItem()
-            box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-            icon = Gtk.Image.new_from_icon_name(icon_name, Gtk.IconSize.MENU)
-            label = Gtk.Label(label=label_text)
-            box.pack_start(icon, False, False, 0)
-            box.pack_start(label, False, False, 0)
-            item.add(box)
-            item.connect("activate", lambda _: os.system(command))
-            return item
-
-        logout_cmd = "pkill -KILL -u $USER"
-        if "HYPRLAND_INSTANCE_SIGNATURE" in os.environ:
-            logout_cmd = "hyprctl dispatch exit"
-        
-        menu.append(create_item("Log Out", "system-log-out-symbolic", logout_cmd))
-        menu.append(create_item("Reboot", "system-reboot-symbolic", "loginctl reboot"))
-        menu.append(create_item("Power Off", "system-shutdown-symbolic", "loginctl poweroff"))
-
-        menu.show_all()
-        menu.popup_at_widget(target_widget, Gdk.Gravity.SOUTH, Gdk.Gravity.NORTH, None)
+        # The session menu is a layer-shell window anchored to the center of the
+        # screen (see session_menu.SessionMenu), so it always opens centered
+        # regardless of where the power button lives on the bar.
+        self.session_menu.toggle()
 
     def toggle_launcher(self):
         if self.launcher.get_visible():
@@ -93,14 +69,15 @@ class MainStatusBar(StatusBar):
 
 
 if __name__ == "__main__":
-    from gi.repository import Gdk
-    
     launcher = AppLauncher()
     launcher.set_visible(False)
     launcher.add_keybinding("escape", lambda: launcher.set_visible(False))
-    
-    bar = MainStatusBar(launcher_window=launcher)
-    app = Application("d77-shell", [bar, launcher])
+
+    session_menu = SessionMenu()
+    session_menu.set_visible(False)
+
+    bar = MainStatusBar(launcher_window=launcher, session_menu=session_menu)
+    app = Application("d77-shell", [bar, launcher, session_menu])
     
     signal.signal(signal.SIGUSR1, lambda signum, frame: bar.toggle_launcher())
     signal.signal(signal.SIGUSR2, lambda signum, frame: bar.popup_power_menu())

@@ -258,14 +258,34 @@ tooltip {
     padding: 4px;
 }
 
-#session-menu menuitem {
+/* session menu items are now Buttons (centered layer-shell window),
+   so target "button" instead of the old Gtk.Menu "menuitem". */
+#session-menu button {
     padding: 6px 12px;
     border-radius: 6px;
     color: var(--foreground);
+    background-color: transparent;
+    border: solid 1px transparent;
 }
 
-#session-menu menuitem:hover {
+#session-menu button:hover {
     background-color: var(--color1);
+}
+
+#session-menu button:focus {
+    background-color: var(--color1);
+    outline-style: solid;
+    outline-width: 2px;
+    outline-color: var(--color6);
+    outline-offset: -2px;
+}
+
+#session-menu button:focus-visible {
+    background-color: var(--color1);
+    outline-style: solid;
+    outline-width: 2px;
+    outline-color: var(--color6);
+    outline-offset: -2px;
 }
 
 #session-menu label, 

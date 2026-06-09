@@ -207,7 +207,7 @@ tooltip {
     padding: 0px 10px;
     background-color: var(--module-bg);
     color: var(--color6);
-    border: solid 1px transparent;
+    border: solid 0px transparent;
 }
 
 #launcher-window button:hover {

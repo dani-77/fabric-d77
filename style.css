@@ -256,6 +256,7 @@ tooltip {
     border-radius: 10px;
     background-color: var(--background);
     padding: 4px;
+	min-width: 350px;
 }
 
 /* session menu items are now Buttons (centered layer-shell window),

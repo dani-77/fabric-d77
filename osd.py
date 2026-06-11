@@ -108,6 +108,24 @@ class OSD(Window):
     """Janela overlay de OSD (volume + brilho)."""
 
     def __init__(self, **kwargs):
+        # IMPORTANTE: inicializar primeiro o GObject base (WaylandWindow).
+        # Como OSD herda de uma Gtk.Window (via Fabric), o objeto tem de estar
+        # inicializado *antes* de criar/atribuir widgets ou adicionar filhos —
+        # caso contrário o GObject lança
+        # "RuntimeError: object ... of type OSD is not initialized".
+        # Este é o mesmo padrão usado por SessionMenu e StatusBar.
+        super().__init__(
+            name="osd-window",
+            layer="overlay",
+            anchor="top right",
+            margin="16px 16px 0px 0px",
+            exclusivity="none",
+            pass_through=True,   # não bloqueia eventos do rato
+            visible=False,
+            all_visible=False,
+            **kwargs,
+        )
+
         # ── Ícone ───────────────────────────────────────────────────────────
         self.icon = Image(
             name="osd-icon",
@@ -138,18 +156,8 @@ class OSD(Window):
             children=[self.icon, self.scale, self.label],
         )
 
-        super().__init__(
-            name="osd-window",
-            layer="overlay",
-            anchor="top right",
-            margin="16px 16px 0px 0px",
-            exclusivity="none",
-            pass_through=True,   # não bloqueia eventos do rato
-            visible=False,
-            all_visible=False,
-            child=self.container,
-            **kwargs,
-        )
+        # Adiciona o conteúdo à janela já inicializada.
+        self.children = self.container
 
         # ── Estado ────────────────────────────────────────────────────────────
         self._hide_timer: int | None = None

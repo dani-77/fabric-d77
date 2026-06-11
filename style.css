@@ -256,7 +256,7 @@ tooltip {
     border-radius: 10px;
     background-color: var(--background);
     padding: 4px;
-	min-width: 350px;
+        min-width: 350px;
 }
 
 /* session menu items are now Buttons (centered layer-shell window),
@@ -296,4 +296,68 @@ tooltip {
 
 tooltip>* {
     padding: 2px 4px
+}
+
+/* ── OSD (volume / brilho) ─────────────────────────────────────────────────
+   Overlay minimalista no canto superior direito: ícone + barra de progresso
+   + percentagem. */
+#osd-box {
+    padding: 10px 16px;
+    min-width: 260px;
+    border: solid 2px var(--border-color);
+    border-radius: 18px;
+    background-color: var(--window-bg);
+}
+
+#osd-icon {
+    color: var(--color6);
+}
+
+#osd-label {
+    font-weight: 900;
+    min-width: 42px;
+    color: var(--foreground);
+}
+
+/* Barra de progresso (Gtk.Scale não-interativa). */
+#osd-scale {
+    min-width: 140px;
+    min-height: 8px;
+}
+
+#osd-scale trough {
+    min-height: 8px;
+    border-radius: 100px;
+    background-color: var(--module-bg);
+}
+
+#osd-scale highlight {
+    min-height: 8px;
+    border-radius: 100px;
+    background-color: var(--color6);
+}
+
+/* Esconde o "slider"/handle — só queremos a barra de progresso. */
+#osd-scale slider {
+    min-width: 0px;
+    min-height: 0px;
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+/* Tonalidade diferente para o brilho. */
+#osd-box.brightness #osd-icon,
+#osd-scale.brightness highlight {
+    color: var(--color4);
+    background-color: var(--color4);
+}
+
+/* Estado mute: ícone/realce esbatidos. */
+#osd-box.muted #osd-icon {
+    color: var(--color8);
+}
+
+#osd-scale.muted highlight {
+    background-color: var(--color8);
 }

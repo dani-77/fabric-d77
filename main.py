@@ -20,6 +20,7 @@ from fabric.utils import get_relative_path
 from bar import StatusBar
 from launcher import AppLauncher
 from session_menu import SessionMenu
+from osd import OSD
 
 class MainStatusBar(StatusBar):
     def __init__(self, launcher_window: AppLauncher, session_menu: SessionMenu):
@@ -76,11 +77,31 @@ if __name__ == "__main__":
     session_menu = SessionMenu()
     session_menu.set_visible(False)
 
+    # OSD overlay (volume + brilho). Mostra-se sozinho ao detetar mudanças
+    # (polling), por isso funciona mesmo que as teclas multimédia estejam
+    # ligadas diretamente ao amixer/brightnessctl.
+    osd = OSD()
+
     bar = MainStatusBar(launcher_window=launcher, session_menu=session_menu)
-    app = Application("d77-shell", [bar, launcher, session_menu])
-    
+    app = Application("d77-shell", [bar, launcher, session_menu, osd])
+
     signal.signal(signal.SIGUSR1, lambda signum, frame: bar.toggle_launcher())
     signal.signal(signal.SIGUSR2, lambda signum, frame: bar.popup_power_menu())
+
+    # Sinais em tempo real para acionar o OSD a partir de keybinds, caso se
+    # prefira que seja a shell a aplicar a alteração (alternativa a ligar as
+    # teclas diretamente ao amixer/brightnessctl):
+    #   SIGRTMIN+1  volume +        SIGRTMIN+4  brilho +
+    #   SIGRTMIN+2  volume -        SIGRTMIN+5  brilho -
+    #   SIGRTMIN+3  mute toggle
+    # Ex. (Hyprland):
+    #   bindel = , XF86AudioRaiseVolume, exec, kill -s SIGRTMIN+1 $(pgrep -f main.py)
+    rtmin = signal.SIGRTMIN
+    signal.signal(rtmin + 1, lambda s, f: osd.volume_up())
+    signal.signal(rtmin + 2, lambda s, f: osd.volume_down())
+    signal.signal(rtmin + 3, lambda s, f: osd.volume_mute_toggle())
+    signal.signal(rtmin + 4, lambda s, f: osd.brightness_up())
+    signal.signal(rtmin + 5, lambda s, f: osd.brightness_down())
     
     style_path = get_relative_path("./style.css")
     if os.path.exists(style_path):

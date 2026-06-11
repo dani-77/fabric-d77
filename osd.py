@@ -149,7 +149,10 @@ class OSD(Window):
         # ── Percentagem ──────────────────────────────────────────────────────
         self.label = Label(name="osd-label", label="0%")
 
-        self.container = Box(
+        # NOTA: o atributo NÃO se pode chamar ``self.container`` — esse nome
+        # colide com um *field* introspetado do GObject/Gtk que é só-de-leitura,
+        # provocando "RuntimeError: field is not writable". Usamos ``self.box``.
+        self.box = Box(
             name="osd-box",
             orientation="h",
             spacing=12,
@@ -157,7 +160,7 @@ class OSD(Window):
         )
 
         # Adiciona o conteúdo à janela já inicializada.
-        self.children = self.container
+        self.children = self.box
 
         # ── Estado ────────────────────────────────────────────────────────────
         self._hide_timer: int | None = None
@@ -222,12 +225,12 @@ class OSD(Window):
     def _set_mode_class(self, mode: str, muted: bool):
         # Permite estilizar volume/brilho/mute de forma diferente via CSS.
         for cls in ("volume", "brightness", "muted"):
-            self.container.remove_style_class(cls)
+            self.box.remove_style_class(cls)
             self.scale.remove_style_class(cls)
-        self.container.add_style_class(mode)
+        self.box.add_style_class(mode)
         self.scale.add_style_class(mode)
         if muted:
-            self.container.add_style_class("muted")
+            self.box.add_style_class("muted")
             self.scale.add_style_class("muted")
 
     def _reveal(self):

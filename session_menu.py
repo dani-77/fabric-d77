@@ -30,7 +30,7 @@ class SessionMenu(Window):
 
         logout_cmd = "pkill -KILL -u $USER"
         if "HYPRLAND_INSTANCE_SIGNATURE" in os.environ:
-            logout_cmd = "hyprctl dispatch exit"
+            logout_cmd = "hyprctl dispatch 'hl.dsp.exit()'"
 
         self.add(
             Box(

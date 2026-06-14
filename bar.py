@@ -105,7 +105,7 @@ def get_battery_info():
                     time_str = f" ({hours}h {minutes}m)"
             
             if charging:
-                icon = "battery-charging-symbolic"
+                icon = "battery-level-50-charging-symbolic"
             else:
                 if percent > 25: icon = "battery-good-symbolic"
                 else: icon = "battery-caution-symbolic"

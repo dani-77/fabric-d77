@@ -1,3 +1,4 @@
+from terminal_launcher import launch_app
 import operator
 from collections.abc import Iterator
 from fabric import Application
@@ -121,7 +122,7 @@ class AppLauncher(Window):
                 ],
             ),
             tooltip_text=app.description,
-            on_clicked=lambda *_: (app.launch(), self.set_visible(False)),
+	    on_clicked=lambda *_: (launch_app(app), self.set_visible(False)),
             **kwargs,
         )
 

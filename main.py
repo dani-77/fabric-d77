@@ -21,10 +21,12 @@ from bar import StatusBar
 from launcher import AppLauncher
 from session_menu import SessionMenu
 from osd import OSD
+from wallpaper_selector import WallpaperSelector
 
 class MainStatusBar(StatusBar):
-    def __init__(self, launcher_window: AppLauncher, session_menu: SessionMenu):
+    def __init__(self, launcher_window: AppLauncher, wallpaper_selector: WallpaperSelector, session_menu: SessionMenu):
         self.launcher = launcher_window
+        self.wallpaper_selector = wallpaper_selector
         self.session_menu = session_menu
         super().__init__()
 
@@ -35,10 +37,17 @@ class MainStatusBar(StatusBar):
             on_clicked=lambda *_: self.toggle_launcher(),
         )
 
+        wallpaper_button = Button(
+            name="wallpaper-button",
+            child=Image(icon_name="preferences-desktop-wallpaper-symbolic", icon_size=14),
+            on_clicked=lambda *_: self.toggle_wallpaper_selector(),
+        )
+
         if hasattr(self, "main_layout") and len(self.main_layout.children) > 0:
             left_container = self.main_layout.children[0]
             current_left = left_container.children
             current_left.insert(0, launcher_button)
+            current_left.insert(1, wallpaper_button)
             left_container.children = current_left
 
         self.power_button = Button(
@@ -52,6 +61,9 @@ class MainStatusBar(StatusBar):
             right_container.add(self.power_button)
 
         return super().show_all()
+
+    def toggle_wallpaper_selector(self):
+        self.wallpaper_selector.toggle()
 
     def popup_power_menu(self, button=None):
         # The session menu is a layer-shell window anchored to the center of the
@@ -77,13 +89,18 @@ if __name__ == "__main__":
     session_menu = SessionMenu()
     session_menu.set_visible(False)
 
+    wallpaper_selector = WallpaperSelector()
+    wallpaper_selector.set_visible(False)
+    wallpaper_selector.add_keybinding("escape", lambda: wallpaper_selector.set_visible(False))
+
+
     # OSD overlay (volume + brilho). Mostra-se sozinho ao detetar mudanças
     # (polling), por isso funciona mesmo que as teclas multimédia estejam
     # ligadas diretamente ao amixer/brightnessctl.
     osd = OSD()
 
-    bar = MainStatusBar(launcher_window=launcher, session_menu=session_menu)
-    app = Application("d77-shell", [bar, launcher, session_menu, osd])
+    bar = MainStatusBar(launcher_window=launcher, session_menu=session_menu, wallpaper_selector=wallpaper_selector)
+    app = Application("d77-shell", [bar, launcher, session_menu, osd, wallpaper_selector])
 
     signal.signal(signal.SIGUSR1, lambda signum, frame: bar.toggle_launcher())
     signal.signal(signal.SIGUSR2, lambda signum, frame: bar.popup_power_menu())
@@ -102,6 +119,7 @@ if __name__ == "__main__":
     signal.signal(rtmin + 3, lambda s, f: osd.volume_mute_toggle())
     signal.signal(rtmin + 4, lambda s, f: osd.brightness_up())
     signal.signal(rtmin + 5, lambda s, f: osd.brightness_down())
+    signal.signal(rtmin + 6, lambda s, f: bar.toggle_wallpaper_selector())
     
     style_path = get_relative_path("./style.css")
     if os.path.exists(style_path):

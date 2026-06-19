@@ -361,3 +361,48 @@ tooltip>* {
 #osd-scale.muted highlight {
     background-color: var(--color8);
 }
+
+#wallpaper-selector {
+	padding: 16px;
+	background-color: rgba(30, 30, 30, 0.95);
+	border-radius: 12px;
+}
+
+#wallpaper-title {
+	font-size: 16px;
+	font-weight: bold;
+	color: #ffffff;
+}
+
+#wallpaper-scroll {
+	min-height: 750px;
+	min-width: 700px;
+}
+
+
+#wallpaper-thumb, wallpaper-thumb-selected {
+	padding: 4px;
+	border-radius: 8px;
+	background-color: rgba(255, 255, 255, 0.05);
+}
+
+#wallpaper-thumb-selected {
+	border: 2px solid #88c0d0;
+}
+
+#wallpaper-thumb-label {
+	font-size: 11px;
+	color: #cccccc;
+}
+
+#wallpaper-button {
+    padding: 0px 10px;
+    background-color: var(--module-bg);
+    color: var(--color6);
+    border: solid 1px transparent;
+}
+
+#wallpaper-button:hover {
+    background-color: var(--ws-hover);
+    border-color: var(--color6);
+}

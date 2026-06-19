@@ -164,8 +164,8 @@ tooltip {
 }
 
 #launcher-window {
+    padding: 16px;
     background-color: var(--background);
-    padding: 12px;
     border: solid 2px var(--ws-active); 
     border-radius: 12px;
 }
@@ -252,8 +252,8 @@ tooltip {
 }
 
 #session-menu {
-    border: solid 2px var(--border-color);
-    border-radius: 10px;
+    border: solid 2px var(--ws-active);
+    border-radius: 12px;
     background-color: var(--background);
     padding: 4px;
         min-width: 350px;
@@ -363,9 +363,10 @@ tooltip>* {
 }
 
 #wallpaper-selector {
-	padding: 16px;
-	background-color: rgba(30, 30, 30, 0.95);
-	border-radius: 12px;
+    padding: 16px;
+    background-color: var(--background);
+    border: solid 2px var(--ws-active); 
+    border-radius: 12px;
 }
 
 #wallpaper-title {

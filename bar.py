@@ -61,18 +61,26 @@ class VolumeWidget(Box):
 
 def get_wifi_details():
     try:
-        cmd = "nmcli -t -f ACTIVE,SIGNAL device wifi list"
-        output = subprocess.check_output(cmd, shell=True, text=True, stderr=subprocess.DEVNULL)
-        
-        for line in output.strip().split("\n"):
-            if line.startswith("sim:"):
-                parts = line.split(":")
-                if len(parts) >= 2:
-                    signal = parts[1]
-                    return f"{signal}%"
+        net_root = "/sys/class/net"
+        iface = next(
+            (e for e in os.listdir(net_root)
+             if os.path.isdir(os.path.join(net_root, e, "wireless"))),
+            None,
+        )
+        if iface:
+            output = subprocess.check_output(
+                ["iw", "dev", iface, "link"],
+                text=True, stderr=subprocess.DEVNULL,
+            )
+            for line in output.splitlines():
+                line = line.strip()
+                if line.startswith("signal:"):
+                    dbm = int(line.split()[1])
+                    percent = max(0, min(100, 2 * (dbm + 100)))
+                    return f"{percent}%"
     except Exception:
         pass
-    
+
     return "Disconnected"
 
 

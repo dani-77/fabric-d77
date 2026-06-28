@@ -78,11 +78,18 @@ def get_wifi_details():
 
 def get_battery_info():
     try:
-        bat_dir = "/sys/class/power_supply/BAT0"
-        if not os.path.exists(bat_dir):
-            bat_dir = "/sys/class/power_supply/BAT1"
-            
-        if os.path.exists(bat_dir):
+        ps_root = "/sys/class/power_supply"
+        bat_dir = next(
+            (
+                os.path.join(ps_root, e)
+                for e in os.listdir(ps_root)
+                if os.path.isfile(os.path.join(ps_root, e, "capacity"))
+                and open(os.path.join(ps_root, e, "type")).read().strip() == "Battery"
+            ),
+            None,
+        )
+
+        if bat_dir:
             with open(f"{bat_dir}/capacity", "r") as f:
                 percent = int(f.read().strip())
             

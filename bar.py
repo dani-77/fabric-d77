@@ -1,7 +1,28 @@
 import os
-import psutil 
+import psutil
 import subprocess
 from datetime import datetime
+
+# gi._propertyhelper on Python 3.14 doesn't support IntEnum types (e.g.
+# GtkLayerShell.Layer). Fall back to TYPE_PYOBJECT for unsupported types;
+# the setters in WaylandWindow handle coercion themselves.
+from gi._propertyhelper import Property as _GiProperty
+from gi.repository import GObject as _GObject
+_orig_type_from_python = _GiProperty._type_from_python
+_orig_check_default = _GiProperty._check_default
+def _patched_type_from_python(self, type_):
+    try:
+        return _orig_type_from_python(self, type_)
+    except TypeError:
+        return _GObject.TYPE_PYOBJECT
+def _patched_check_default(self):
+    if self.type == _GObject.TYPE_PYOBJECT:
+        self.default = None
+        return
+    return _orig_check_default(self)
+_GiProperty._type_from_python = _patched_type_from_python
+_GiProperty._check_default = _patched_check_default
+
 from fabric import Application, Fabricator
 from fabric.widgets.box import Box
 from fabric.widgets.image import Image

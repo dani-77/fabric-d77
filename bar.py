@@ -8,18 +8,25 @@ from datetime import datetime
 # the setters in WaylandWindow handle coercion themselves.
 from gi._propertyhelper import Property as _GiProperty
 from gi.repository import GObject as _GObject
+
 _orig_type_from_python = _GiProperty._type_from_python
 _orig_check_default = _GiProperty._check_default
+
+
 def _patched_type_from_python(self, type_):
     try:
         return _orig_type_from_python(self, type_)
     except TypeError:
         return _GObject.TYPE_PYOBJECT
+
+
 def _patched_check_default(self):
     if self.type == _GObject.TYPE_PYOBJECT:
         self.default = None
         return
     return _orig_check_default(self)
+
+
 _GiProperty._type_from_python = _patched_type_from_python
 _GiProperty._check_default = _patched_check_default
 
@@ -38,7 +45,6 @@ from fabric.hyprland.widgets import (
 from fabric.utils import get_relative_path
 
 AUDIO_WIDGET = True
-
 if AUDIO_WIDGET is True:
     try:
         from fabric.audio.service import Audio
@@ -52,9 +58,7 @@ class VolumeWidget(Box):
         self.icon = Image(icon_name="audio-speakers-symbolic", icon_size=14)
         self.label = Label(name="volume-label", label="0%")
         self.content = Box(spacing=4, orientation="h", children=[self.icon, self.label])
-
         self.audio = Audio(notify_speaker=self.on_speaker_changed)
-
         super().__init__(
             children=EventBox(
                 events="scroll", child=self.content, on_scroll_event=self.on_scroll
@@ -73,7 +77,6 @@ class VolumeWidget(Box):
     def on_speaker_changed(self):
         if not self.audio.speaker:
             return
-
         self.label.set_label(f"{int(self.audio.speaker.volume)}%")
         return self.audio.speaker.bind(
             "volume", "label", self.label, lambda _, v: f"{int(v)}%"
@@ -93,15 +96,20 @@ def get_wifi_details():
                 ["iw", "dev", iface, "link"],
                 text=True, stderr=subprocess.DEVNULL,
             )
+            ssid, percent = None, None
             for line in output.splitlines():
                 line = line.strip()
-                if line.startswith("signal:"):
+                if line.startswith("SSID:"):
+                    ssid = line.split(":", 1)[1].strip()
+                elif line.startswith("signal:"):
                     dbm = int(line.split()[1])
                     percent = max(0, min(100, 2 * (dbm + 100)))
-                    return f"{percent}%"
+            if ssid and percent is not None:
+                if len(ssid) > 14:
+                    ssid = ssid[:14] + "…"
+                return f"{ssid} · {percent}%"
     except Exception:
         pass
-
     return "Disconnected"
 
 
@@ -117,40 +125,33 @@ def get_battery_info():
             ),
             None,
         )
-
         if bat_dir:
             with open(f"{bat_dir}/capacity", "r") as f:
                 percent = int(f.read().strip())
-            
             with open(f"{bat_dir}/status", "r") as f:
                 status = f.read().strip().lower()
-            
             charging = status == "charging"
+
             time_str = ""
-            
             time_file = f"{bat_dir}/time_to_full_now" if charging else f"{bat_dir}/time_to_empty_now"
-            
             if os.path.exists(time_file):
                 with open(time_file, "r") as f:
                     seconds = int(f.read().strip())
-                
                 if 0 < seconds < 1000000:
                     hours = seconds // 3600
                     minutes = (seconds % 3600) // 60
                     # Formata o tempo como (1h 45m)
                     time_str = f" ({hours}h {minutes}m)"
-            
+
             if charging:
                 icon = "battery-caution-charging-symbolic"
             else:
                 if percent > 25: icon = "battery-good-symbolic"
                 else: icon = "battery-caution-symbolic"
-                
+
             return icon, f"{percent}%{time_str}"
-            
     except Exception:
         pass
-        
     return "battery-missing-symbolic", "N/A"
 
 
@@ -164,7 +165,6 @@ class StatusBar(Window):
             exclusivity="auto",
             visible=False,
         )
-
         self.hyprland = Hyprland()
 
         cpu_icon = Image(icon_name="cpu-symbolic", icon_size=14)
@@ -203,7 +203,7 @@ class StatusBar(Window):
         battery_icon = Image(icon_name="battery-full-symbolic", icon_size=14)
         battery_label = Label(name="battery-label", label="--%")
         battery_box = Box(spacing=4, orientation="h", children=[battery_icon, battery_label])
-        
+
         def update_battery(_, info):
             icon_name, percent_text = info
             battery_icon.set_from_icon_name(icon_name, 14)
@@ -228,7 +228,7 @@ class StatusBar(Window):
 
         self.system_status = Box(
             name="system-status",
-            spacing=14, 
+            spacing=14,
             orientation="h",
             children=[
                 cpu_box,
@@ -249,7 +249,7 @@ class StatusBar(Window):
             children=HyprlandWorkspaces(
                 name="workspaces",
                 spacing=4,
-                buttons_factory=create_workspace_button, 
+                buttons_factory=create_workspace_button,
             ),
         )
 
@@ -282,5 +282,4 @@ if __name__ == "__main__":
     bar = StatusBar()
     app = Application("bar", bar)
     app.set_stylesheet_from_file(get_relative_path("./style.css"))
-
     app.run()

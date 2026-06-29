@@ -37,12 +37,43 @@ from fabric.widgets.eventbox import EventBox
 from fabric.widgets.label import Label
 from fabric.system_tray.widgets import SystemTray
 from fabric.widgets.wayland import WaylandWindow as Window
-from fabric.hyprland.widgets import (
-    Hyprland,
-    HyprlandWorkspaces,
-    WorkspaceButton,
-)
 from fabric.utils import get_relative_path
+
+
+def _detect_compositor() -> str:
+    """Return a compositor identifier based on environment variables."""
+    if os.environ.get("HYPRLAND_INSTANCE_SIGNATURE"):
+        return "hyprland"
+    if os.environ.get("SWAYSOCK"):
+        return "sway"
+    if os.environ.get("I3SOCK"):
+        return "i3"
+    desktop = os.environ.get("XDG_CURRENT_DESKTOP", "").lower()
+    if "hyprland" in desktop:
+        return "hyprland"
+    if "sway" in desktop:
+        return "sway"
+    return "unknown"
+
+
+def _create_workspaces_widget(**kwargs):
+    """Return the right workspaces widget for the running compositor."""
+    compositor = _detect_compositor()
+    if compositor == "hyprland":
+        from fabric.hyprland.widgets import HyprlandWorkspaces, WorkspaceButton
+        return HyprlandWorkspaces(
+            buttons_factory=lambda ws_id: WorkspaceButton(id=ws_id, label=None),
+            **kwargs,
+        )
+    if compositor in ("sway", "i3"):
+        from fabric.i3.widgets import I3Workspaces, WorkspaceButton
+        return I3Workspaces(
+            buttons_factory=lambda ws_id: WorkspaceButton(id=ws_id, label=None),
+            **kwargs,
+        )
+    # Scroll, MangOWC, or other compositors: return an empty placeholder.
+    # Extend this function when those compositors gain fabric/IPC support.
+    return Box(**kwargs)
 
 AUDIO_WIDGET = True
 if AUDIO_WIDGET is True:
@@ -165,8 +196,6 @@ class StatusBar(Window):
             exclusivity="auto",
             visible=False,
         )
-        self.hyprland = Hyprland()
-
         cpu_icon = Image(icon_name="cpu-symbolic", icon_size=14)
         cpu_label = Label(name="cpu-label", label="0%")
         cpu_box = Box(spacing=4, orientation="h", children=[cpu_icon, cpu_label])
@@ -239,18 +268,9 @@ class StatusBar(Window):
             + ([VolumeWidget()] if AUDIO_WIDGET else []),
         )
 
-        def create_workspace_button(ws_id):
-            btn = WorkspaceButton(id=ws_id, label=None)
-            btn.connect("clicked", lambda _: self.hyprland.send_command(f"dispatch workspace {ws_id}"))
-            return btn
-
         left_container = Box(
             name="start-container",
-            children=HyprlandWorkspaces(
-                name="workspaces",
-                spacing=4,
-                buttons_factory=create_workspace_button,
-            ),
+            children=_create_workspaces_widget(name="workspaces", spacing=4),
         )
 
         spacer = Box()

@@ -2,16 +2,6 @@ import os
 import sys
 import signal
 
-if "HYPRLAND_INSTANCE_SIGNATURE" not in os.environ:
-    from unittest.mock import MagicMock
-    from fabric.widgets.box import Box
-    mock_module = MagicMock()
-    mock_module.Hyprland = MagicMock
-    mock_module.HyprlandWorkspaces = lambda **kwargs: Box(name="workspaces-placeholder")
-    mock_module.WorkspaceButton = lambda **kwargs: Box()
-    sys.modules["fabric.hyprland.widgets"] = mock_module
-    sys.modules["fabric.hyprland.service"] = mock_module
-
 from fabric import Application
 from fabric.widgets.button import Button
 from fabric.widgets.image import Image

@@ -21,7 +21,7 @@ def _get_icon_pixbuf(app: DesktopApp, size: int = 32):
             return GdkPixbuf.Pixbuf.new_from_file_at_scale(icon_path, size, size, True)
         except Exception:
             pass
-    return app.get_icon_pixbuf(size=size, default_icon=None)
+    return app.get_icon_pixbuf(size=size, default_icon="application-x-executable")
 
 
 class AppLauncher(Window):
@@ -138,13 +138,12 @@ class AppLauncher(Window):
         return False
 
     def bake_application_slot(self, app: DesktopApp, **kwargs) -> Button:
-        pixbuf = _get_icon_pixbuf(app)
-        icon_children = [Image(pixbuf=pixbuf, h_align="start", size=32)] if pixbuf else []
         return Button(
             child=Box(
                 orientation="h",
                 spacing=12,
-                children=icon_children + [
+                children=[
+                    Image(pixbuf=_get_icon_pixbuf(app), h_align="start", size=32),
                     Label(
                         label=app.display_name or "Unknown",
                         v_align="center",

@@ -411,7 +411,7 @@ tooltip>* {
 
 #dashboard-row image {
     color: var(--color6);
-    min-width: 24px;
+    min-width: 32px;
 }
 
 #dashboard-user {

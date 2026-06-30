@@ -94,7 +94,7 @@ class InfoDashboard(Window):
                 orientation="h",
                 spacing=12,
                 children=[
-                    Image(icon_name=icon_name, icon_size=20),
+                    Image(icon_name=icon_name, icon_size=32),
                     Label(name=name, label=text, h_align="start"),
                 ],
             )
@@ -109,7 +109,7 @@ class InfoDashboard(Window):
             orientation="h",
             spacing=12,
             children=[
-                Image(icon_name="appointment-soon-symbolic", icon_size=20),
+                Image(icon_name="appointment-soon-symbolic", icon_size=32),
                 self._uptime_label,
             ],
         )
@@ -118,7 +118,7 @@ class InfoDashboard(Window):
             orientation="h",
             spacing=12,
             children=[
-                Image(icon_name="weather-few-clouds-symbolic", icon_size=20),
+                Image(icon_name="weather-few-clouds-symbolic", icon_size=32),
                 self._weather_label,
             ],
         )

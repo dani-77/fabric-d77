@@ -1,6 +1,8 @@
 from terminal_launcher import launch_app
 import operator
+import os
 from collections.abc import Iterator
+from gi.repository import GdkPixbuf, Gio
 from fabric import Application
 from fabric.widgets.box import Box
 from fabric.widgets.label import Label
@@ -10,6 +12,16 @@ from fabric.widgets.entry import Entry
 from fabric.widgets.scrolledwindow import ScrolledWindow
 from fabric.widgets.wayland import WaylandWindow as Window
 from fabric.utils import DesktopApp, get_desktop_applications, idle_add, remove_handler
+
+
+def _get_icon_pixbuf(app: DesktopApp, size: int = 32):
+    icon_path = getattr(app, "icon_name", None)
+    if icon_path and os.path.isabs(icon_path) and os.path.isfile(icon_path):
+        try:
+            return GdkPixbuf.Pixbuf.new_from_file_at_scale(icon_path, size, size, True)
+        except Exception:
+            pass
+    return app.get_icon_pixbuf(size=size)
 
 
 class AppLauncher(Window):
@@ -25,6 +37,12 @@ class AppLauncher(Window):
         )
         self._arranger_handler: int = 0
         self._all_apps = get_desktop_applications()
+        self._app_monitors = []
+        for path in self._watched_app_dirs():
+            gfile = Gio.File.new_for_path(path)
+            mon = gfile.monitor_directory(Gio.FileMonitorFlags.NONE, None)
+            mon.connect("changed", self._on_app_dir_changed)
+            self._app_monitors.append(mon)
 
         self.viewport = Box(spacing=2, orientation="v")
         self.search_entry = Entry(
@@ -63,6 +81,18 @@ class AppLauncher(Window):
         )
         self.add_keybinding("escape", lambda: self.set_visible(False))
         self.show_all()
+
+    def _watched_app_dirs(self):
+        candidates = [
+            "/usr/share/applications",
+            "/usr/local/share/applications",
+            os.path.expanduser("~/.local/share/applications"),
+        ]
+        return [d for d in candidates if os.path.isdir(d)]
+
+    def _on_app_dir_changed(self, monitor, file, _other, event_type):
+        if file.get_basename().endswith(".desktop"):
+            self._all_apps = get_desktop_applications()
 
     def refresh_apps(self):
         self.search_entry.set_text("")
@@ -113,7 +143,7 @@ class AppLauncher(Window):
                 orientation="h",
                 spacing=12,
                 children=[
-                    Image(pixbuf=app.get_icon_pixbuf(), h_align="start", size=32),
+                    Image(pixbuf=_get_icon_pixbuf(app), h_align="start", size=32),
                     Label(
                         label=app.display_name or "Unknown",
                         v_align="center",

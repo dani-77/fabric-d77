@@ -268,16 +268,15 @@ class StatusBar(Window):
         )
 
         _ws_widget = _create_workspaces_widget(name="workspaces", spacing=4)
-        left_container = (
-            Box(name="start-container", children=_ws_widget)
-            if _ws_widget is not None
-            else None
+        self.left_container = Box(
+            name="start-container",
+            children=[_ws_widget] if _ws_widget is not None else [],
         )
 
         spacer = Box()
         spacer.set_hexpand(True)
 
-        right_container = Box(
+        self.right_container = Box(
             name="end-container",
             spacing=12,
             orientation="h",
@@ -288,12 +287,11 @@ class StatusBar(Window):
             ],
         )
 
-        bar_children = ([left_container] if left_container is not None else []) + [spacer, right_container]
         self.main_layout = Box(
             name="bar-inner",
             orientation="h",
             spacing=0,
-            children=bar_children,
+            children=[self.left_container, spacer, self.right_container],
         )
 
         self.children = self.main_layout

@@ -33,12 +33,10 @@ class MainStatusBar(StatusBar):
             on_clicked=lambda *_: self.toggle_wallpaper_selector(),
         )
 
-        if hasattr(self, "main_layout") and len(self.main_layout.children) > 0:
-            left_container = self.main_layout.children[0]
-            current_left = left_container.children
-            current_left.insert(0, launcher_button)
-            current_left.insert(1, wallpaper_button)
-            left_container.children = current_left
+        current_left = list(self.left_container.children)
+        current_left.insert(0, launcher_button)
+        current_left.insert(1, wallpaper_button)
+        self.left_container.children = current_left
 
         self.power_button = Button(
             name="power-button",
@@ -46,9 +44,7 @@ class MainStatusBar(StatusBar):
             on_clicked=lambda btn: self.popup_power_menu(btn),
         )
 
-        if hasattr(self, "main_layout") and len(self.main_layout.children) > 2:
-            right_container = self.main_layout.children[2]
-            right_container.add(self.power_button)
+        self.right_container.add(self.power_button)
 
         return super().show_all()
 

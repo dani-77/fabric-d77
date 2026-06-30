@@ -71,9 +71,8 @@ def _create_workspaces_widget(**kwargs):
             buttons_factory=lambda ws_id: WorkspaceButton(id=ws_id, label=None),
             **kwargs,
         )
-    # Scroll, MangOWC, or other compositors: return an empty placeholder.
-    # Extend this function when those compositors gain fabric/IPC support.
-    return Box(**kwargs)
+    # Unsupported compositor — caller should check for None and skip the widget.
+    return None
 
 AUDIO_WIDGET = True
 if AUDIO_WIDGET is True:
@@ -268,9 +267,11 @@ class StatusBar(Window):
             + ([VolumeWidget()] if AUDIO_WIDGET else []),
         )
 
-        left_container = Box(
-            name="start-container",
-            children=_create_workspaces_widget(name="workspaces", spacing=4),
+        _ws_widget = _create_workspaces_widget(name="workspaces", spacing=4)
+        left_container = (
+            Box(name="start-container", children=_ws_widget)
+            if _ws_widget is not None
+            else None
         )
 
         spacer = Box()
@@ -287,11 +288,12 @@ class StatusBar(Window):
             ],
         )
 
+        bar_children = ([left_container] if left_container is not None else []) + [spacer, right_container]
         self.main_layout = Box(
             name="bar-inner",
             orientation="h",
             spacing=0,
-            children=[left_container, spacer, right_container]
+            children=bar_children,
         )
 
         self.children = self.main_layout

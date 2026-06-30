@@ -61,9 +61,9 @@ class SessionMenu(Window):
         return Button(
             child=Box(
                 orientation="h",
-                spacing=8,
+                spacing=12,
                 children=[
-                    Image(icon_name=icon_name, icon_size=14),
+                    Image(icon_name=icon_name, icon_size=32),
                     Label(label=label_text, h_align="start"),
                 ],
             ),

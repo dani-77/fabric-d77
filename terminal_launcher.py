@@ -8,6 +8,7 @@ em vez de depender do app.launch() padrão do Fabric.
 
 import configparser
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -137,13 +138,23 @@ def app_needs_terminal(app) -> bool:
 
 
 
+_FIELD_CODE_RE = re.compile(r"%[fFuUdDnNickvmhH]")
+
+
+def _strip_field_codes(cmd: str) -> str:
+    """Remove XDG field codes from an Exec string (no files/URLs to substitute)."""
+    cmd = cmd.replace("%%", "\x00")
+    cmd = _FIELD_CODE_RE.sub("", cmd)
+    return " ".join(cmd.replace("\x00", "%").split())
+
+
 def launch_app(app) -> None:
     """
     Lança um fabric.utils.DesktopApp respeitando Terminal=true (lido manualmente
     do .desktop original, já que o Fabric não expõe esse atributo), usando o
     terminal resolvido em vez do comportamento default da lib.
     """
-    exec_cmd = app.command_line
+    exec_cmd = _strip_field_codes(app.command_line)
 
     if app_needs_terminal(app):
         cmd = build_launch_command(exec_cmd)

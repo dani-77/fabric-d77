@@ -12,6 +12,7 @@ from launcher import AppLauncher
 from session_menu import SessionMenu
 from osd import OSD
 from wallpaper_selector import WallpaperSelector
+from dashboard import InfoDashboard
 
 class MainStatusBar(StatusBar):
     def __init__(self, launcher_window: AppLauncher, wallpaper_selector: WallpaperSelector, session_menu: SessionMenu):
@@ -85,8 +86,11 @@ if __name__ == "__main__":
     # ligadas diretamente ao amixer/brightnessctl.
     osd = OSD()
 
+    dashboard = InfoDashboard()
+    dashboard.set_visible(False)
+
     bar = MainStatusBar(launcher_window=launcher, session_menu=session_menu, wallpaper_selector=wallpaper_selector)
-    app = Application("d77-shell", [bar, launcher, session_menu, osd, wallpaper_selector])
+    app = Application("d77-shell", [bar, launcher, session_menu, osd, wallpaper_selector, dashboard])
 
     signal.signal(signal.SIGUSR1, lambda signum, frame: bar.toggle_launcher())
     signal.signal(signal.SIGUSR2, lambda signum, frame: bar.popup_power_menu())
@@ -106,6 +110,7 @@ if __name__ == "__main__":
     signal.signal(rtmin + 4, lambda s, f: osd.brightness_up())
     signal.signal(rtmin + 5, lambda s, f: osd.brightness_down())
     signal.signal(rtmin + 6, lambda s, f: bar.toggle_wallpaper_selector())
+    signal.signal(rtmin + 7, lambda s, f: dashboard.toggle())
     
     style_path = get_relative_path("./style.css")
     if os.path.exists(style_path):

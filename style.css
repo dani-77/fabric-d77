@@ -396,6 +396,37 @@ tooltip>* {
 	color: #cccccc;
 }
 
+/* ── Info Dashboard (SIGRTMIN+7) ──────────────────────────────────────────── */
+#info-dashboard {
+    padding: 20px 24px;
+    background-color: var(--background);
+    border: solid 2px var(--ws-active);
+    border-radius: 16px;
+    min-width: 320px;
+}
+
+#dashboard-row {
+    padding: 4px 0px;
+}
+
+#dashboard-row image {
+    color: var(--color6);
+    min-width: 24px;
+}
+
+#dashboard-user {
+    font-size: 15px;
+    font-weight: 900;
+    color: var(--color6);
+}
+
+#dashboard-os,
+#dashboard-uptime,
+#dashboard-weather {
+    font-size: 13px;
+    color: var(--foreground);
+}
+
 #wallpaper-button {
     padding: 0px 10px;
     background-color: var(--module-bg);

@@ -1,4 +1,4 @@
-import os
+import session_actions
 
 from fabric.widgets.box import Box
 from fabric.widgets.label import Label
@@ -8,14 +8,7 @@ from fabric.widgets.wayland import WaylandWindow as Window
 
 
 class SessionMenu(Window):
-    """Power / session menu rendered as a layer-shell window centered on screen.
-
-    On Wayland (Hyprland) a ``Gtk.Menu`` popup is an ``xdg_popup`` that must be
-    anchored to a parent surface, so it cannot be freely positioned at the
-    center of the screen. Using a layer-shell ``WaylandWindow`` with
-    ``anchor="center"`` is the reliable way to center it (this mirrors how the
-    application launcher is centered).
-    """
+    """Power / session menu rendered as a layer-shell window centered on screen."""
 
     def __init__(self, **kwargs):
         super().__init__(
@@ -28,28 +21,16 @@ class SessionMenu(Window):
             **kwargs,
         )
 
-        logout_cmd = "pkill -KILL -u $USER"
-        if "HYPRLAND_INSTANCE_SIGNATURE" in os.environ:
-            logout_cmd = "hyprctl dispatch 'hl.dsp.exit()'"
-
         self.add(
             Box(
                 name="session-menu",
                 orientation="v",
                 spacing=4,
                 children=[
-                    self.bake_item(
-                        "Lock", "system-lock-screen-symbolic", "hyprlock"
-                    ),
-                    self.bake_item(
-                        "Log Out", "system-log-out-symbolic", logout_cmd
-                    ),
-                    self.bake_item(
-                        "Reboot", "system-reboot-symbolic", "loginctl reboot"
-                    ),
-                    self.bake_item(
-                        "Power Off", "system-shutdown-symbolic", "loginctl poweroff"
-                    ),
+                    self.bake_item("Lock",      "system-lock-screen-symbolic", session_actions.lock),
+                    self.bake_item("Log Out",   "system-log-out-symbolic",     session_actions.logout),
+                    self.bake_item("Reboot",    "system-reboot-symbolic",      session_actions.reboot),
+                    self.bake_item("Power Off", "system-shutdown-symbolic",    session_actions.poweroff),
                 ],
             )
         )
@@ -57,7 +38,7 @@ class SessionMenu(Window):
         self.add_keybinding("escape", lambda *_: self.set_visible(False))
         self.show_all()
 
-    def bake_item(self, label_text: str, icon_name: str, command: str) -> Button:
+    def bake_item(self, label_text: str, icon_name: str, action) -> Button:
         return Button(
             child=Box(
                 orientation="h",
@@ -67,7 +48,7 @@ class SessionMenu(Window):
                     Label(label=label_text, h_align="start"),
                 ],
             ),
-            on_clicked=lambda *_: (self.set_visible(False), os.system(command)),
+            on_clicked=lambda *_: (self.set_visible(False), action()),
         )
 
     def toggle(self):

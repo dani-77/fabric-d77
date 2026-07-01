@@ -398,33 +398,120 @@ tooltip>* {
 
 /* ── Info Dashboard (SIGRTMIN+7) ──────────────────────────────────────────── */
 #info-dashboard {
-    padding: 20px 24px;
+    padding: 16px;
     background-color: var(--background);
     border: solid 2px var(--ws-active);
     border-radius: 16px;
-    min-width: 320px;
+    min-width: 400px;
 }
 
-#dashboard-row {
-    padding: 4px 0px;
+/* Quadros de sistema (CPU / RAM / TEMP / DISCO) */
+#dashboard-card {
+    padding: 10px 12px;
+    background-color: var(--module-bg);
+    border-radius: 10px;
 }
 
-#dashboard-row image {
+#dashboard-card image {
     color: var(--color6);
-    min-width: 32px;
 }
 
-#dashboard-user {
-    font-size: 15px;
+#dashboard-card-value {
+    font-size: 14px;
     font-weight: 900;
-    color: var(--color6);
+    color: var(--foreground);
 }
 
-#dashboard-os,
-#dashboard-uptime,
-#dashboard-weather {
+#dashboard-card-title {
+    font-size: 10px;
+    color: var(--color8);
+}
+
+/* Quadro de meteorologia */
+#dashboard-weather-card {
+    padding: 8px 12px;
+    background-color: var(--module-bg);
+    border-radius: 10px;
+}
+
+#dashboard-weather-card image {
+    color: var(--color4);
+}
+
+#dashboard-weather-text {
     font-size: 13px;
     color: var(--foreground);
+}
+
+/* cmus */
+#dashboard-cmus {
+    padding: 8px 12px;
+    background-color: var(--module-bg);
+    border-radius: 10px;
+}
+
+#dashboard-cmus-icon {
+    color: var(--color6);
+}
+
+#dashboard-track {
+    font-size: 12px;
+    color: var(--foreground);
+}
+
+#dashboard-cmus-btn {
+    padding: 4px 8px;
+    border-radius: 6px;
+    background-color: transparent;
+    color: var(--foreground);
+    border: solid 1px transparent;
+}
+
+#dashboard-cmus-btn:hover {
+    background-color: var(--color1);
+}
+
+/* Botões de sessão */
+#dashboard-session {
+    padding: 0px;
+}
+
+#dashboard-session-btn {
+    padding: 8px 4px;
+    border-radius: 10px;
+    background-color: var(--module-bg);
+    color: var(--foreground);
+    border: solid 1px transparent;
+}
+
+#dashboard-session-btn:hover {
+    background-color: var(--color1);
+}
+
+#dashboard-session-btn image {
+    color: var(--color6);
+}
+
+#dashboard-session-label {
+    font-size: 10px;
+    color: var(--color8);
+}
+
+/* Botão nmtui */
+#dashboard-net-btn {
+    padding: 8px 12px;
+    border-radius: 10px;
+    background-color: var(--module-bg);
+    color: var(--foreground);
+    border: solid 1px transparent;
+}
+
+#dashboard-net-btn:hover {
+    background-color: var(--color1);
+}
+
+#dashboard-net-btn image {
+    color: var(--color4);
 }
 
 #wallpaper-button {

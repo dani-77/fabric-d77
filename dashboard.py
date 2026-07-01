@@ -52,19 +52,21 @@ def _fetch_weather_sync() -> str:
         with urllib.request.urlopen(req, timeout=6) as resp:
             return resp.read().decode("utf-8").strip()
     except Exception:
-        return "meteorologia indisponível"
+        return "weather unavailable"
 
 
-def _cmus_status() -> tuple[str, str]:
-    """Devolve (estado, faixa). estado: 'playing' | 'paused' | 'stopped'."""
+def _cmus_status() -> tuple[bool, str, str]:
+    """Devolve (running, estado, faixa)."""
     try:
-        out = subprocess.run(
+        result = subprocess.run(
             ["cmus-remote", "-Q"],
             stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
-        ).stdout
+        )
+        if result.returncode != 0:
+            return False, "stopped", "—"
         status = "stopped"
         artist = title = ""
-        for line in out.splitlines():
+        for line in result.stdout.splitlines():
             if line.startswith("status "):
                 status = line.split(" ", 1)[1].strip()
             elif line.startswith("tag artist "):
@@ -74,9 +76,27 @@ def _cmus_status() -> tuple[str, str]:
         track = f"{artist} — {title}" if artist and title else title or "—"
         if len(track) > 42:
             track = track[:40] + "…"
-        return status, track
+        return True, status, track
     except Exception:
-        return "stopped", "cmus indisponível"
+        return False, "stopped", "—"
+
+
+def _start_cmus_headless():
+    """Arranca cmus em sessão tmux ou screen detached."""
+    for exe, args in [
+        ("tmux",   ["new-session", "-d", "-s", "cmus", "cmus"]),
+        ("screen", ["-dmS", "cmus", "cmus"]),
+    ]:
+        try:
+            subprocess.run(["which", exe], check=True,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.Popen(
+                [exe] + args,
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            )
+            return
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            pass
 
 
 def _get_net_status() -> tuple[str, str]:
@@ -132,7 +152,7 @@ def _launch_nmtui():
             pass
 
 
-# ── Helpers de construção ─────────────────────────────────────────────────────
+# ── Construction Helpers ─────────────────────────────────────────────────────
 
 def _stat_card(icon_name: str, value_label: Label, title: str) -> Box:
     card = Box(
@@ -206,10 +226,10 @@ class InfoDashboard(Window):
             on_changed=lambda _, v: self._disk_val.set_label(f"{v}%"),
         )
 
-        # ── Meteorologia ──────────────────────────────────────────────────────
+        # ── Weather ──────────────────────────────────────────────────────
         self._weather_label = Label(
             name="dashboard-weather-text",
-            label="a carregar…",
+            label="updating…",
             h_align="start",
             h_expand=True,
         )
@@ -244,14 +264,57 @@ class InfoDashboard(Window):
                 ),
             )
 
-        playpause_btn = Button(
-            name="dashboard-cmus-btn",
-            child=self._playpause_icon,
-            on_clicked=lambda *_: subprocess.run(
-                ["cmus-remote", "-u"],
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-            ),
+        # Estado: cmus a correr — faixa + controlos
+        self._cmus_controls_box = Box(
+            orientation="h",
+            spacing=10,
+            h_expand=True,
+            children=[
+                self._track_label,
+                Box(
+                    name="dashboard-cmus-controls",
+                    orientation="h",
+                    spacing=2,
+                    children=[
+                        _cmus_btn("media-skip-backward-symbolic", ["-r"]),
+                        Button(
+                            name="dashboard-cmus-btn",
+                            child=self._playpause_icon,
+                            on_clicked=lambda *_: subprocess.run(
+                                ["cmus-remote", "-u"],
+                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                            ),
+                        ),
+                        _cmus_btn("media-skip-forward-symbolic", ["-n"]),
+                    ],
+                ),
+            ],
         )
+
+        # Estado: cmus parado — botão de arranque headless
+        self._cmus_start_box = Box(
+            orientation="h",
+            spacing=10,
+            h_expand=True,
+            children=[
+                Button(
+                    name="dashboard-cmus-btn",
+                    child=Box(
+                        orientation="h",
+                        spacing=8,
+                        children=[
+                            Image(icon_name="media-playback-start-symbolic", icon_size=32),
+                            Label(label="Start cmus", h_align="start"),
+                        ],
+                    ),
+                    on_clicked=lambda *_: _start_cmus_headless(),
+                ),
+            ],
+        )
+
+        _init_running, _, _ = _cmus_status()
+        self._cmus_controls_box.set_visible(_init_running)
+        self._cmus_start_box.set_visible(not _init_running)
 
         cmus_row = Box(
             name="dashboard-cmus",
@@ -260,17 +323,8 @@ class InfoDashboard(Window):
             children=[
                 Image(name="dashboard-cmus-icon",
                       icon_name="audio-x-generic-symbolic", icon_size=32),
-                self._track_label,
-                Box(
-                    name="dashboard-cmus-controls",
-                    orientation="h",
-                    spacing=2,
-                    children=[
-                        _cmus_btn("media-skip-backward-symbolic", ["-r"]),
-                        playpause_btn,
-                        _cmus_btn("media-skip-forward-symbolic",  ["-n"]),
-                    ],
-                ),
+                self._cmus_controls_box,
+                self._cmus_start_box,
             ],
         )
 
@@ -301,7 +355,7 @@ class InfoDashboard(Window):
             on_changed=self._on_net_update,
         )
 
-        # ── Botões de sessão ──────────────────────────────────────────────────
+        # ── Session ──────────────────────────────────────────────────
         def _session_btn(icon: str, label: str, action) -> Button:
             btn = Button(
                 name="dashboard-session-btn",
@@ -351,14 +405,17 @@ class InfoDashboard(Window):
         self._net_label.set_label(label_text)
 
     def _on_cmus_update(self, _, value):
-        status, track = value
-        self._track_label.set_label(track)
-        icon = (
-            "media-playback-pause-symbolic"
-            if status == "playing"
-            else "media-playback-start-symbolic"
-        )
-        self._playpause_icon.set_from_icon_name(icon, 32)
+        running, status, track = value
+        self._cmus_controls_box.set_visible(running)
+        self._cmus_start_box.set_visible(not running)
+        if running:
+            self._track_label.set_label(track)
+            icon = (
+                "media-playback-pause-symbolic"
+                if status == "playing"
+                else "media-playback-start-symbolic"
+            )
+            self._playpause_icon.set_from_icon_name(icon, 32)
 
     def toggle(self):
         if self.get_visible():

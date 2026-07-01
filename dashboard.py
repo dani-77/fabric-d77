@@ -152,7 +152,7 @@ def _launch_nmtui():
             pass
 
 
-# ── Construction Helpers ─────────────────────────────────────────────────────
+# ── Helpers de construção ─────────────────────────────────────────────────────
 
 def _stat_card(icon_name: str, value_label: Label, title: str) -> Box:
     card = Box(
@@ -226,7 +226,7 @@ class InfoDashboard(Window):
             on_changed=lambda _, v: self._disk_val.set_label(f"{v}%"),
         )
 
-        # ── Weather ──────────────────────────────────────────────────────
+        # ── Meteorologia ──────────────────────────────────────────────────────
         self._weather_label = Label(
             name="dashboard-weather-text",
             label="updating…",
@@ -355,7 +355,7 @@ class InfoDashboard(Window):
             on_changed=self._on_net_update,
         )
 
-        # ── Session ──────────────────────────────────────────────────
+        # ── Botões de sessão ──────────────────────────────────────────────────
         def _session_btn(icon: str, label: str, action) -> Button:
             btn = Button(
                 name="dashboard-session-btn",

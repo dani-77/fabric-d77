@@ -33,7 +33,7 @@ def lock():
 
 def logout():
     if os.environ.get("HYPRLAND_INSTANCE_SIGNATURE"):
-        os.system("hyprctl dispatch exit")
+        os.system("hyprctl dispatch 'hl.dsp.exit()'")
     elif os.environ.get("SWAYSOCK"):
         os.system("swaymsg exit")
     else:

@@ -82,21 +82,28 @@ def _cmus_status() -> tuple[bool, str, str]:
 
 
 def _start_cmus_headless():
-    """Arranca cmus em sessão tmux ou screen detached."""
-    for exe, args in [
-        ("tmux",   ["new-session", "-d", "-s", "cmus", "cmus"]),
-        ("screen", ["-dmS", "cmus", "cmus"]),
-    ]:
-        try:
-            subprocess.run(["which", exe], check=True,
-                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            subprocess.Popen(
-                [exe] + args,
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-            )
-            return
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            pass
+    """Arranca cmus em sessão tmux ou screen detached.
+
+    Mata primeiro qualquer sessão "cmus" existente (mesmo órfã) e passa
+    XDG_RUNTIME_DIR/HOME explicitamente ao cmus: um servidor tmux que
+    sobreviva a um logout/troca de compositor mantém o ambiente com que
+    foi originalmente arrancado, o que faz o cmus escrever o socket de
+    controlo num sítio que o cmus-remote atual já não encontra.
+    """
+    env_prefix = (
+        f"XDG_RUNTIME_DIR={os.environ.get('XDG_RUNTIME_DIR', '')} "
+        f"HOME={os.environ.get('HOME', '')} "
+    )
+    script = (
+        "tmux kill-session -t cmus >/dev/null 2>&1; "
+        f'command -v tmux >/dev/null 2>&1 && {{ tmux new-session -d -s cmus "{env_prefix}cmus"; exit 0; }}; '
+        f'command -v screen >/dev/null 2>&1 && {{ screen -dmS cmus sh -c "{env_prefix}exec cmus"; exit 0; }}; '
+        "exit 1"
+    )
+    subprocess.Popen(
+        ["sh", "-c", script],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
 
 
 def _get_net_status() -> tuple[str, str]:

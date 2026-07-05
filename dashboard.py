@@ -143,11 +143,11 @@ def _get_net_status() -> tuple[str, str]:
 
 def _launch_nmtui():
     candidates = [
-        ("foot",      []),
-        ("kitty",     []),
-        ("alacritty", ["-e"]),
-        ("wezterm",   ["start"]),
-        ("xterm",     ["-e"]),
+        ("foot",      ["--app-id=nmtui-float"]),
+        ("kitty",     ["--class=nmtui-float"]),
+        ("alacritty", ["--class=nmtui-float", "-e"]),
+        ("wezterm",   ["start", "--class", "nmtui-float", "--"]),
+        ("xterm",     ["-class", "nmtui-float", "-e"]),
     ]
     for exe, args in candidates:
         try:

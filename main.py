@@ -15,11 +15,11 @@ from wallpaper_selector import WallpaperSelector
 from dashboard import InfoDashboard
 
 class MainStatusBar(StatusBar):
-    def __init__(self, launcher_window: AppLauncher, wallpaper_selector: WallpaperSelector, session_menu: SessionMenu):
+    def __init__(self, launcher_window: AppLauncher, wallpaper_selector: WallpaperSelector, session_menu: SessionMenu, osd: OSD):
         self.launcher = launcher_window
         self.wallpaper_selector = wallpaper_selector
         self.session_menu = session_menu
-        super().__init__()
+        super().__init__(osd=osd)
 
     def show_all(self):
         launcher_button = Button(
@@ -89,7 +89,7 @@ if __name__ == "__main__":
     dashboard = InfoDashboard()
     dashboard.set_visible(False)
 
-    bar = MainStatusBar(launcher_window=launcher, session_menu=session_menu, wallpaper_selector=wallpaper_selector)
+    bar = MainStatusBar(launcher_window=launcher, session_menu=session_menu, wallpaper_selector=wallpaper_selector, osd=osd)
     app = Application("d77-shell", bar, launcher, session_menu, osd, wallpaper_selector, dashboard)
 
     signal.signal(signal.SIGUSR1, lambda signum, frame: bar.toggle_launcher())

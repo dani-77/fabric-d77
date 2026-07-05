@@ -1,30 +1,34 @@
-"""On-Screen Display (OSD) para volume e brilho — fabric-d77.
+"""On-Screen Display (OSD) para volume, brilho e perfil de energia — fabric-d77.
 
 Overlay minimalista (ícone + barra de progresso + percentagem) que aparece no
-canto superior direito sempre que o volume ou o brilho do ecrã mudam, e
-desaparece automaticamente após alguns segundos.
+canto superior direito sempre que o volume, o brilho do ecrã ou o perfil de
+energia mudam, e desaparece automaticamente após alguns segundos.
 
 Backends (propositadamente independentes do servidor de áudio, à semelhança do
 módulo equivalente no quickshell-d77):
 
 * Volume  -> ALSA via ``amixer`` (com suporte a mute/unmute).
 * Brilho  -> ``brightnessctl``.
+* Perfil de energia -> ``powerprofilesctl``.
 
 Funcionamento:
 
-* Um ``Fabricator`` faz polling periódico do volume/mute e do brilho. Sempre que
-  deteta uma mudança (mesmo que provocada externamente — por exemplo teclas
-  multimédia ligadas diretamente ao ``amixer``/``brightnessctl``, ou outra app a
-  mexer no volume) mostra o OSD correspondente.
+* Um ``Fabricator`` faz polling periódico do volume/mute, do brilho e do
+  perfil de energia. Sempre que deteta uma mudança (mesmo que provocada
+  externamente — por exemplo teclas multimédia ligadas diretamente ao
+  ``amixer``/``brightnessctl``, ou outra app a mexer no volume/perfil) mostra o
+  OSD correspondente.
 * O OSD também expõe métodos públicos (:meth:`OSD.volume_up`,
   :meth:`OSD.volume_down`, :meth:`OSD.volume_mute_toggle`,
-  :meth:`OSD.brightness_up`, :meth:`OSD.brightness_down`) para quem preferir que
-  seja a shell a aplicar a alteração e mostrar o OSD de imediato.
+  :meth:`OSD.brightness_up`, :meth:`OSD.brightness_down`,
+  :meth:`OSD.power_profile_cycle`) para quem preferir que seja a shell a
+  aplicar a alteração e mostrar o OSD de imediato.
 
 A janela é uma layer-shell ``WaylandWindow`` na camada *overlay*, ancorada ao
 topo-direita, com ``pass_through=True`` para não bloquear o rato.
 """
 
+import re
 import subprocess
 
 import gi
@@ -85,6 +89,32 @@ def get_volume() -> tuple[int, bool]:
                 muted = True
             break
     return level, muted
+
+
+POWER_PROFILES = ["performance", "balanced", "power-saver"]
+
+
+def get_power_profile() -> str:
+    """Lê o perfil de energia ativo via D-Bus (net.hadess.PowerProfiles).
+
+    Usa ``gdbus`` (binário nativo, ~20ms) em vez de ``powerprofilesctl``
+    (script Python, ~500ms) porque esta função corre em cada ciclo de
+    polling (a cada :data:`POLL_INTERVAL_MS`) — com ``powerprofilesctl`` o
+    tempo do próprio polling excedia o intervalo e bloqueava o GLib main
+    loop, impedindo a shell inteira de renderizar janelas.
+
+    Em caso de erro devolve "" (tratado como "indisponível").
+    """
+    out = _run([
+        "gdbus", "call", "--system",
+        "--dest", "net.hadess.PowerProfiles",
+        "--object-path", "/net/hadess/PowerProfiles",
+        "--method", "org.freedesktop.DBus.Properties.Get",
+        "net.hadess.PowerProfiles", "ActiveProfile",
+    ])
+    match = re.search(r"'([^']+)'", out)
+    profile = match.group(1) if match else ""
+    return profile if profile in POWER_PROFILES else ""
 
 
 def get_brightness() -> int:
@@ -167,21 +197,27 @@ class OSD(Window):
         # Baseline inicial (não mostra OSD no arranque; só em mudanças futuras).
         self._last_vol, self._last_muted = get_volume()
         self._last_bri = get_brightness()
+        self._last_profile = get_power_profile()
 
         # ── Polling para detetar mudanças externas ───────────────────────────
         self._watcher = Fabricator(
             interval=POLL_INTERVAL_MS,
-            poll_from=lambda *_: (get_volume(), get_brightness()),
+            poll_from=lambda *_: (get_volume(), get_brightness(), get_power_profile()),
             on_changed=self._on_poll,
-            default_value=((self._last_vol, self._last_muted), self._last_bri),
+            default_value=(
+                (self._last_vol, self._last_muted),
+                self._last_bri,
+                self._last_profile,
+            ),
         )
 
     # ── Polling ──────────────────────────────────────────────────────────────
     def _on_poll(self, _, value):
-        (vol, muted), bri = value
+        (vol, muted), bri, profile = value
 
         vol_changed = (vol != self._last_vol) or (muted != self._last_muted)
         bri_changed = (bri != self._last_bri) and (bri >= 0)
+        profile_changed = (profile != self._last_profile) and profile
 
         # Brilho tem prioridade se ambos mudarem no mesmo ciclo (raro).
         if bri_changed:
@@ -190,6 +226,9 @@ class OSD(Window):
         if vol_changed:
             self._last_vol, self._last_muted = vol, muted
             self._show_volume(vol, muted)
+        if profile_changed:
+            self._last_profile = profile
+            self._show_power_profile(profile)
 
     # ── Apresentação ──────────────────────────────────────────────────────────
     def _volume_icon(self, level: int, muted: bool) -> str:
@@ -201,6 +240,9 @@ class OSD(Window):
             return "audio-volume-medium-symbolic"
         return "audio-volume-high-symbolic"
 
+    def _power_profile_icon(self, profile: str) -> str:
+        return f"power-profile-{profile}-symbolic"
+
     def _brightness_icon(self, level: int) -> str:
         if level < 34:
             return "display-brightness-low-symbolic"
@@ -209,6 +251,7 @@ class OSD(Window):
         return "display-brightness-high-symbolic"
 
     def _show_volume(self, level: int, muted: bool):
+        self.scale.set_visible(True)
         self.icon.set_from_icon_name(self._volume_icon(level, muted), 24)
         self.scale.set_value(0 if muted else level)
         self.label.set_label("mute" if muted else f"{level}%")
@@ -216,15 +259,25 @@ class OSD(Window):
         self._reveal()
 
     def _show_brightness(self, level: int):
+        self.scale.set_visible(True)
         self.icon.set_from_icon_name(self._brightness_icon(level), 24)
         self.scale.set_value(level)
         self.label.set_label(f"{level}%")
         self._set_mode_class("brightness", False)
         self._reveal()
 
+    def _show_power_profile(self, profile: str):
+        # Perfil de energia é um estado discreto, não uma percentagem —
+        # esconde a barra de progresso e mostra só ícone + nome.
+        self.scale.set_visible(False)
+        self.icon.set_from_icon_name(self._power_profile_icon(profile), 24)
+        self.label.set_label(profile.replace("-", " ").title())
+        self._set_mode_class("power", False)
+        self._reveal()
+
     def _set_mode_class(self, mode: str, muted: bool):
-        # Permite estilizar volume/brilho/mute de forma diferente via CSS.
-        for cls in ("volume", "brightness", "muted"):
+        # Permite estilizar volume/brilho/mute/power de forma diferente via CSS.
+        for cls in ("volume", "brightness", "power", "muted"):
             self.box.remove_style_class(cls)
             self.scale.remove_style_class(cls)
         self.box.add_style_class(mode)
@@ -265,6 +318,15 @@ class OSD(Window):
         _run(["brightnessctl", "set", f"{STEP}%-"])
         self._refresh_brightness()
 
+    def power_profile_cycle(self, *_):
+        current = get_power_profile() or self._last_profile
+        try:
+            next_profile = POWER_PROFILES[(POWER_PROFILES.index(current) + 1) % len(POWER_PROFILES)]
+        except ValueError:
+            next_profile = POWER_PROFILES[0]
+        _run(["powerprofilesctl", "set", next_profile])
+        self._refresh_power_profile()
+
     def _refresh_volume(self):
         vol, muted = get_volume()
         self._last_vol, self._last_muted = vol, muted
@@ -275,6 +337,12 @@ class OSD(Window):
         if bri >= 0:
             self._last_bri = bri
             self._show_brightness(bri)
+
+    def _refresh_power_profile(self):
+        profile = get_power_profile()
+        if profile:
+            self._last_profile = profile
+            self._show_power_profile(profile)
 
 
 if __name__ == "__main__":

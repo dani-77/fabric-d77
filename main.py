@@ -98,7 +98,7 @@ if __name__ == "__main__":
     # ligadas diretamente ao amixer/brightnessctl.
     osd = OSD()
 
-    dashboard = InfoDashboard()
+    dashboard = InfoDashboard(on_lock=lockscreen.lock)
     dashboard.set_visible(False)
 
     bar = MainStatusBar(launcher_window=launcher, session_menu=session_menu, wallpaper_selector=wallpaper_selector, osd=osd)

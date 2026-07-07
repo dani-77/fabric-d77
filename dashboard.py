@@ -182,7 +182,7 @@ def _stat_card(icon_name: str, value_label: Label, title: str) -> Box:
 class InfoDashboard(Window):
     """Painel de informação rápida acionado por SIGRTMIN+7."""
 
-    def __init__(self, **kwargs):
+    def __init__(self, on_lock=None, **kwargs):
         super().__init__(
             layer="overlay",
             anchor="top left",
@@ -386,7 +386,7 @@ class InfoDashboard(Window):
             orientation="h",
             spacing=8,
             children=[
-                _session_btn("system-lock-screen-symbolic", "Lock",      session_actions.lock),
+                _session_btn("system-lock-screen-symbolic", "Lock",      on_lock or session_actions.lock),
                 _session_btn("system-log-out-symbolic",     "Log Out",   session_actions.logout),
                 _session_btn("system-reboot-symbolic",      "Reboot",    session_actions.reboot),
                 _session_btn("system-shutdown-symbolic",    "Power Off", session_actions.poweroff),

@@ -159,11 +159,14 @@ class LockScreen:
 
     def _unlock(self):
         if self._lock is not None:
-            self._lock.unlock_and_destroy()
-            Gdk.Display.get_default().sync()
-            self._lock = None
-        self._destroy_windows()
+            lock, self._lock = self._lock, None
+            lock.unlock_and_destroy()
         self._locked = False
+        # Schedule destruction as an idle callback so the main loop can process
+        # the compositor's unlock acknowledgment before we destroy the surfaces.
+        # Calling display.sync() here deadlocks: the compositor may be waiting
+        # for us to drain events while we block waiting for it.
+        GLib.idle_add(self._destroy_windows)
 
     def _destroy_windows(self):
         for fab in self._fabricators:
@@ -174,11 +177,12 @@ class LockScreen:
         self._windows = []
 
     def _on_finished(self, *_):
-        # The compositor could not (or can no longer) hold the lock — e.g.
-        # the protocol request was rejected, or another locker took over.
-        # Fall back to an external locker so the screen never ends up
-        # silently unlocked.
+        # Compositor ended the lock (rejected or taken over by another client).
+        # Only fall back to an external locker if WE didn't initiate the unlock
+        # — if _unlock() already cleared _locked we're in a normal flow.
+        falling_back = self._locked
         self._lock = None
-        self._destroy_windows()
         self._locked = False
-        session_actions.lock()
+        self._destroy_windows()
+        if falling_back:
+            session_actions.lock()

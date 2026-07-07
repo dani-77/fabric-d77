@@ -4,7 +4,8 @@ import os
 import gi
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, Gdk, GdkPixbuf, Gio, GLib
+gi.require_version("GtkLayerShell", "0.1")
+from gi.repository import Gtk, Gdk, GdkPixbuf, Gio, GLib, GtkLayerShell
 
 from fabric.utils import get_relative_path
 from fabric.widgets.wayland import WaylandWindow
@@ -56,6 +57,25 @@ class Backdrop(WaylandWindow):
             visible=False,
             **kwargs,
         )
+
+        # exclusivity="none" só significa que ESTA janela não reserva zona
+        # exclusiva própria — mas por omissão ainda respeita a zona
+        # reservada por OUTRAS camadas (ex.: a barra), encolhendo-se para
+        # não a sobrepor. Como isto é só decoração atrás de tudo (layer
+        # "bottom"), não interessa sobrepor-se à barra — ela desenha-se por
+        # cima na mesma. exclusive_zone=-1 é o valor especial do protocolo
+        # layer-shell para "ignora zonas exclusivas de outras camadas",
+        # equivalente ao WlrLayershell.exclusionMode: Ignore do Backdrop.qml.
+        GtkLayerShell.set_exclusive_zone(self, -1)
+
+        # Construímos com visible=False (a visibilidade real só é decidida
+        # a seguir, em _sync_visibility) — mas isso significa que o GTK
+        # nunca chamou show_all(), e um widget filho começa por omissão
+        # invisível (visible=False), independentemente do estado da janela
+        # que o contém. set_visible() na janela só afeta a própria janela,
+        # não os filhos, por isso sem isto o drawing_area nunca chegaria a
+        # ser desenhado. Só precisa de correr uma vez.
+        self.drawing_area.show()
 
         self._watch_state_file()
         self._sync_visibility()

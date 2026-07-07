@@ -1,5 +1,18 @@
 #!/usr/bin/env bash
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PAM_DEST="/etc/pam.d/fabric-d77"
+
+if [ ! -f "$PAM_DEST" ]; then
+    if command -v pkexec >/dev/null 2>&1; then
+        pkexec install -m644 "$SCRIPT_DIR/pam/fabric-d77" "$PAM_DEST" 2>/dev/null \
+            || notify-send "fabric-d77" "Lock screen inativo: corre 'sudo make install'" 2>/dev/null || true
+    else
+        sudo install -m644 "$SCRIPT_DIR/pam/fabric-d77" "$PAM_DEST" 2>/dev/null \
+            || notify-send "fabric-d77" "Lock screen inativo: corre 'sudo make install'" 2>/dev/null || true
+    fi
+fi
+
 # venv pré-construído na ISO (path fixo, sem necessidade de rede)
 SYSTEM_VENV="/etc/xdg/fabric-d77/venv"
 SYSTEM_SRC="/etc/xdg/fabric-d77"

@@ -172,9 +172,11 @@ class LockScreen:
         for fab in self._fabricators:
             fab.stop()
         self._fabricators = []
-        for window in self._windows:
-            window.destroy()
-        self._windows = []
+        # Do NOT call window.destroy() — unlock_and_destroy() already freed the
+        # Wayland lock surfaces at the protocol level; a second destroy triggers
+        # a Wayland protocol error that kills the entire compositor client.
+        # Dropping the Python references is enough; GLib will finalize them.
+        self._windows.clear()
 
     def _on_finished(self, *_):
         # Compositor ended the lock (rejected or taken over by another client).

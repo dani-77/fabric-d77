@@ -71,18 +71,18 @@ class MainStatusBar(StatusBar):
 
 
 if __name__ == "__main__":
-    # Fundo decorativo mostrado só enquanto não houver wallpaper (ver
-    # backdrop.py). Reage sozinho a mudanças no ficheiro de estado
-    # (wallpaper_state.py), não precisa de wiring extra aqui.
+    # Decorative background shown only while no wallpaper is active (see
+    # backdrop.py). Reacts to state file changes on its own
+    # (wallpaper_state.py) — no extra wiring needed here.
     backdrop = Backdrop()
 
     launcher = AppLauncher()
     launcher.set_visible(False)
     launcher.add_keybinding("escape", lambda: launcher.set_visible(False))
 
-    # Locker nativo (ext-session-lock-v1 via GtkSessionLock), com fallback
-    # automático para swaylock/hyprlock/loginctl (session_actions.lock) caso
-    # o protocolo ou o PAM não estejam disponíveis — ver lockscreen.py.
+    # Native locker (ext-session-lock-v1 via GtkSessionLock), with automatic
+    # fallback to swaylock/hyprlock/loginctl (session_actions.lock) if the
+    # protocol or PAM are unavailable — see lockscreen.py.
     lockscreen = LockScreen()
 
     session_menu = SessionMenu(on_lock=lockscreen.lock)
@@ -93,9 +93,9 @@ if __name__ == "__main__":
     wallpaper_selector.add_keybinding("escape", lambda: wallpaper_selector.set_visible(False))
 
 
-    # OSD overlay (volume + brilho). Mostra-se sozinho ao detetar mudanças
-    # (polling), por isso funciona mesmo que as teclas multimédia estejam
-    # ligadas diretamente ao amixer/brightnessctl.
+    # OSD overlay (volume + brightness). Shows itself on detected changes
+    # (polling), so it works even if media keys are wired directly to
+    # amixer/brightnessctl.
     osd = OSD()
 
     dashboard = InfoDashboard(on_lock=lockscreen.lock)
@@ -108,10 +108,10 @@ if __name__ == "__main__":
     signal.signal(signal.SIGUSR2, lambda signum, frame: bar.popup_power_menu())
 
     # Sinais em tempo real para acionar o OSD a partir de keybinds, caso se
-    # prefira que seja a shell a aplicar a alteração (alternativa a ligar as
+    # if you prefer the shell to apply the change (alternative to wiring keys
     # teclas diretamente ao amixer/brightnessctl):
-    #   SIGRTMIN+1  volume +        SIGRTMIN+4  brilho +          SIGRTMIN+7  dashboard
-    #   SIGRTMIN+2  volume -        SIGRTMIN+5  brilho -          SIGRTMIN+8  lock
+    #   SIGRTMIN+1  volume +        SIGRTMIN+4  brightness +      SIGRTMIN+7  dashboard
+    #   SIGRTMIN+2  volume -        SIGRTMIN+5  brightness -      SIGRTMIN+8  lock
     #   SIGRTMIN+3  mute toggle     SIGRTMIN+6  wallpaper picker
     # Ex. (Hyprland):
     #   bindel = , XF86AudioRaiseVolume, exec, kill -s SIGRTMIN+1 $(pgrep -f main.py)

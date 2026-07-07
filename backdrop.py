@@ -16,8 +16,8 @@ import wallpaper_state
 # THEME (Tokyo Night) — mirrors wallpaper_selector.py / bar.py
 # ══════════════════════════════════════════════════════
 COL_BG = (0x1A / 255, 0x1B / 255, 0x26 / 255)
-# Qt.darker(#bb9af7, 220) / Qt.darker(#bb9af7, 140), mesma fórmula (HSV,
-# escala só o V) usada no Backdrop.qml original, para o visual bater certo.
+# Qt.darker(#bb9af7, 220) / Qt.darker(#bb9af7, 140), same formula (HSV,
+# scales only V) used in the original Backdrop.qml, so the visuals match.
 COL_CHEVRON_BACK = (0x55 / 255, 0x46 / 255, 0x70 / 255)
 COL_CHEVRON_FRONT = (0x86 / 255, 0x6E / 255, 0xB0 / 255)
 
@@ -28,17 +28,17 @@ LOGO_OPACITY = 0.25
 
 
 class Backdrop(WaylandWindow):
-    """Fundo decorativo mostrado apenas enquanto não houver wallpaper.
+    """Decorative background shown only while no wallpaper is active.
 
-    Réplica do backdrop/Backdrop.qml do quickshell-d77, mas desenhado com
-    Cairo num Gtk.DrawingArea em vez de QML: o GTK3 não suporta rotação de
-    widgets via CSS (transform: rotate não existe no motor CSS do GTK3),
-    por isso os dois chevrons são desenhados diretamente, replicando a
-    mesma matemática (rotação em torno do centro do retângulo, tal como o
-    transformOrigin: Item.Center por omissão do QML).
+    Replica of backdrop/Backdrop.qml from quickshell-d77, but drawn with
+    Cairo on a Gtk.DrawingArea instead of QML: GTK3 does not support widget
+    rotation via CSS (transform: rotate does not exist in GTK3's CSS engine),
+    so the two chevrons are drawn directly, replicating the same math
+    (rotation around the rectangle's center, matching QML's default
+    transformOrigin: Item.Center).
 
-    Fica na camada "bottom" do layer-shell — acima da camada "background"
-    onde o awww-daemon desenha o wallpaper real. Não intercepta cliques
+    Lives on the "bottom" layer-shell layer — above the "background" layer
+    where awww-daemon renders the real wallpaper. Does not intercept clicks
     (pass_through=True).
     """
 
@@ -58,23 +58,22 @@ class Backdrop(WaylandWindow):
             **kwargs,
         )
 
-        # exclusivity="none" só significa que ESTA janela não reserva zona
-        # exclusiva própria — mas por omissão ainda respeita a zona
-        # reservada por OUTRAS camadas (ex.: a barra), encolhendo-se para
-        # não a sobrepor. Como isto é só decoração atrás de tudo (layer
-        # "bottom"), não interessa sobrepor-se à barra — ela desenha-se por
-        # cima na mesma. exclusive_zone=-1 é o valor especial do protocolo
-        # layer-shell para "ignora zonas exclusivas de outras camadas",
-        # equivalente ao WlrLayershell.exclusionMode: Ignore do Backdrop.qml.
+        # exclusivity="none" only means THIS window does not reserve its own
+        # exclusive zone — but by default it still respects zones reserved by
+        # OTHER layers (e.g. the bar), shrinking to avoid overlapping them.
+        # Since this is just decoration behind everything (layer "bottom"),
+        # it doesn't matter if the bar draws on top anyway.
+        # exclusive_zone=-1 is the layer-shell protocol special value for
+        # "ignore exclusive zones from other layers", equivalent to
+        # WlrLayershell.exclusionMode: Ignore in the original Backdrop.qml.
         GtkLayerShell.set_exclusive_zone(self, -1)
 
-        # Construímos com visible=False (a visibilidade real só é decidida
-        # a seguir, em _sync_visibility) — mas isso significa que o GTK
-        # nunca chamou show_all(), e um widget filho começa por omissão
-        # invisível (visible=False), independentemente do estado da janela
-        # que o contém. set_visible() na janela só afeta a própria janela,
-        # não os filhos, por isso sem isto o drawing_area nunca chegaria a
-        # ser desenhado. Só precisa de correr uma vez.
+        # Built with visible=False (actual visibility is decided later in
+        # _sync_visibility) — but that means GTK never called show_all(),
+        # and a child widget starts invisible by default regardless of its
+        # parent window's state. set_visible() on the window only affects
+        # the window itself, not its children, so without this the
+        # drawing_area would never be rendered. Only needs to run once.
         self.drawing_area.show()
 
         self._watch_state_file()
@@ -84,15 +83,15 @@ class Backdrop(WaylandWindow):
         try:
             return GdkPixbuf.Pixbuf.new_from_file(LOGO_PATH)
         except GLib.Error as exc:
-            print(f"[backdrop] falhou a carregar '{LOGO_PATH}': {exc}")
+            print(f"[backdrop] failed to load '{LOGO_PATH}': {exc}")
             return None
 
-    # -- visibilidade reativa ------------------------------------------------
+    # -- reactive visibility ------------------------------------------------
 
     def _watch_state_file(self):
-        """Observa o diretório do stateFile (Gio.FileMonitor não consegue
-        vigiar um ficheiro que ainda não existe de forma fiável em todos os
-        backends, por isso vigiamos o diretório-pai e filtramos pelo nome).
+        """Watches the stateFile directory (Gio.FileMonitor cannot reliably
+        watch a file that does not yet exist on all backends, so we watch
+        the parent directory and filter by filename).
         """
         os.makedirs(wallpaper_state.STATE_DIR, exist_ok=True)
         gfile = Gio.File.new_for_path(wallpaper_state.STATE_DIR)
@@ -108,7 +107,7 @@ class Backdrop(WaylandWindow):
         has_wallpaper = wallpaper_state.read_current() is not None
         self.set_visible(not has_wallpaper)
 
-    # -- desenho --------------------------------------------------------------
+    # -- drawing --------------------------------------------------------------
 
     def _on_draw(self, widget, cr):
         w = widget.get_allocated_width()
@@ -124,12 +123,12 @@ class Backdrop(WaylandWindow):
         return False
 
     def _draw_chevron(self, cr, w, h, fx, fy, fw, fh, color):
-        """Retângulo rodado 35°, réplica das Rectangle do Backdrop.qml.
+        """Rotated rectangle at 35°, replica of the Rectangle items in Backdrop.qml.
 
-        fx/fy/fw/fh são frações de w/h (x, y, width, height em coordenadas
-        QML, topo-esquerda). A rotação em QML acontece em torno do centro
-        do próprio item (transformOrigin default), por isso traduzimos
-        para o centro antes de rodar.
+        fx/fy/fw/fh are fractions of w/h (x, y, width, height in QML
+        coordinates, top-left origin). QML rotation happens around the item's
+        own center (default transformOrigin), so we translate to the center
+        before rotating.
         """
         rw, rh = fw * w, fh * h
         cx, cy = fx * w + rw / 2, fy * h + rh / 2

@@ -13,11 +13,11 @@ if [ ! -f "$PAM_DEST" ]; then
     fi
 fi
 
-# venv pré-construído na ISO (path fixo, sem necessidade de rede)
+# pre-built venv from the ISO (fixed path, no network needed)
 SYSTEM_VENV="/etc/xdg/fabric-d77/venv"
 SYSTEM_SRC="/etc/xdg/fabric-d77"
 
-# fallback: venv local (instalação manual fora da ISO)
+# fallback: local venv (manual install outside the ISO)
 USER_DIR="$HOME/.config/fabric-d77"
 USER_VENV="$USER_DIR/venv"
 

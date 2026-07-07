@@ -1,15 +1,14 @@
 #!/bin/sh
 # apply-saved-wallpaper.sh (fabric-d77 / awww)
 #
-# Aplica o último wallpaper escolhido no picker (wallpaper_selector.py) mal
-# o awww-daemon arranque, ou pinta o colBg do Backdrop se não houver nenhum
-# guardado (ou tiver sido feito "Clear"). Ao contrário do hyprpaper, o awww
-# não tem um ficheiro de config para pré-carregar antes do daemon arrancar:
-# tudo é feito via comandos IPC a um daemon já a correr, por isso este
-# script tem de correr DEPOIS do "awww-daemon" no exec-once, e espera pelo
-# socket ficar pronto antes de mandar o comando.
+# Applies the last wallpaper chosen in the picker (wallpaper_selector.py) as
+# soon as awww-daemon starts, or paints the Backdrop colBg if none is saved
+# (or "Clear" was used). Unlike hyprpaper, awww has no config file to
+# pre-load before the daemon starts: everything is done via IPC commands to
+# a running daemon, so this script must run AFTER "awww-daemon" in exec-once
+# and waits for the socket to be ready before sending the command.
 #
-# Run this from hyprland config, DEPOIS de "awww-daemon -l background":
+# Run this from hyprland config, AFTER "awww-daemon -l background":
 #   exec-once = awww-daemon -l background
 #   exec-once = sh ~/.config/fabric-d77/apply-saved-wallpaper.sh
 #
@@ -18,8 +17,8 @@
 STATE_FILE="$HOME/.cache/fabric-d77/wallpaper/current"
 CLEAR_COLOR="1a1b26"
 
-# Espera o socket do awww-daemon ficar pronto (arranca em paralelo via
-# exec-once separado, pode ainda não ter inicializado).
+# Wait for the awww-daemon socket to be ready (it starts in parallel via a
+# separate exec-once and may not have initialized yet).
 i=0
 while [ "$i" -lt 10 ]; do
     awww query >/dev/null 2>&1 && break

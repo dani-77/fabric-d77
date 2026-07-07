@@ -1,18 +1,18 @@
 import os
 
-# Onde o último wallpaper escolhido no picker (wallpaper_selector.py) é
-# persistido, para sobreviver a logout/reboot. Lido no arranque do Hyprland
-# por apply-saved-wallpaper.sh, antes do awww-daemon aplicar nada.
+# Where the last wallpaper chosen in the picker (wallpaper_selector.py) is
+# persisted across logout/reboot. Read at Hyprland startup by
+# apply-saved-wallpaper.sh before awww-daemon applies anything.
 #
-# Namespace próprio (~/.cache/fabric-d77/...), separado do usado pelo
-# quickshell-d77 (~/.cache/quickshell/...) — são shells independentes e não
-# devem pisar o estado uma da outra.
+# Own namespace (~/.cache/fabric-d77/...), separate from quickshell-d77
+# (~/.cache/quickshell/...) — they are independent shells and must not
+# overwrite each other's state.
 STATE_DIR = os.path.expanduser("~/.cache/fabric-d77/wallpaper")
 STATE_FILE = os.path.join(STATE_DIR, "current")
 
 
 def read_current() -> str | None:
-    """Devolve o caminho guardado, ou None se não houver nenhum válido."""
+    """Returns the saved path, or None if none exists or the file is gone."""
     try:
         with open(STATE_FILE, "r") as f:
             path = f.read().strip()

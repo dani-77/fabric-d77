@@ -111,8 +111,8 @@ class VolumeWidget(Box):
         return
 
     def on_click(self, *_):
-        # Alterna mute via amixer/ALSA (mesmo backend usado pela tecla
-        # XF86AudioMute), para que o OSD detete a mudança e se mostre.
+        # Toggle mute via amixer/ALSA (same backend as the XF86AudioMute key)
+        # so the OSD detects the change and shows itself.
         if self.osd is not None:
             self.osd.volume_mute_toggle()
         return

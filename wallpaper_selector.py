@@ -11,27 +11,27 @@ from gi.repository import GLib
 
 import wallpaper_state
 
-# Diretório com os wallpapers. Ajusta aqui se quiseres outro caminho.
+# Wallpaper directory. Change this path if yours is different.
 WALLPAPER_DIR = os.path.expanduser("~/Wallpaper")
 
-# Extensões de imagem aceites
+# Accepted image extensions
 VALID_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp", ".bmp")
 
 THUMB_SIZE = 160
 COLUMNS = 4
 
-# Cor (RRGGBB, sem '#') usada pelo awww ao limpar — Tokyo Night colBg,
-# a mesma do Backdrop (backdrop.py). O awww não tem noção de "sem
-# wallpaper", só de "imagem" ou "cor sólida"; quem decide se aparece o
-# backdrop decorativo por cima é o ficheiro de estado (wallpaper_state).
+# Color (RRGGBB, no '#') used by awww when clearing — Tokyo Night colBg,
+# same as Backdrop (backdrop.py). awww has no concept of "no wallpaper",
+# only "image" or "solid color"; whether the decorative backdrop appears
+# on top is decided by the state file (wallpaper_state).
 CLEAR_COLOR = "1a1b26"
 
 
 class WallpaperSelector(Window):
-    """Grid de wallpapers (estilo DankMaterialShell) que aplica via swww ao clicar.
+    """Wallpaper grid (DankMaterialShell style) that applies via awww on click.
 
-    Janela layer-shell standalone, seguindo o mesmo padrão de SessionMenu:
-    overlay centrado, keyboard_mode on-demand, escape para fechar.
+    Standalone layer-shell window, following the same pattern as SessionMenu:
+    centered overlay, keyboard_mode on-demand, escape to close.
     """
 
     def __init__(self, **kwargs):
@@ -105,13 +105,13 @@ class WallpaperSelector(Window):
 
         self.add_keybinding("escape", lambda *_: self.set_visible(False))
 
-        print("[wallpaper_selector] __init__: a chamar populate()")
+        print("[wallpaper_selector] __init__: calling populate()")
         self.populate()
-        print("[wallpaper_selector] __init__: a chamar show_all()")
+        print("[wallpaper_selector] __init__: calling show_all()")
         self.show_all()
-        print("[wallpaper_selector] __init__: concluído")
+        print("[wallpaper_selector] __init__: done")
 
-    # -- listagem / grid -------------------------------------------------
+    # -- listing / grid -------------------------------------------------
 
     def list_wallpapers(self) -> list[str]:
         if not os.path.isdir(WALLPAPER_DIR):
@@ -124,22 +124,22 @@ class WallpaperSelector(Window):
         return files
 
     def populate(self):
-        print("[wallpaper_selector] populate() iniciado")
-        # limpa o grid atual antes de repopular (permite refresh())
+        print("[wallpaper_selector] populate() started")
+        # clear current grid before repopulating (allows refresh())
         for child in list(self.grid_box.children):
             self.grid_box.remove(child)
 
         wallpapers = self.list_wallpapers()
-        print(f"[wallpaper_selector] {len(wallpapers)} wallpapers encontrados")
+        print(f"[wallpaper_selector] {len(wallpapers)} wallpapers found")
 
         if not wallpapers:
             self.grid_box.add(
                 Label(
                     name="wallpaper-empty",
-                    label=f"Nenhuma imagem encontrada em {WALLPAPER_DIR}",
+                    label=f"No images found in {WALLPAPER_DIR}",
                 )
             )
-            print("[wallpaper_selector] populate() terminado (sem wallpapers)")
+            print("[wallpaper_selector] populate() done (no wallpapers)")
             return
 
         row = None
@@ -150,8 +150,8 @@ class WallpaperSelector(Window):
             try:
                 row.add(self.bake_thumbnail(path))
             except Exception as exc:
-                print(f"[wallpaper_selector] ERRO ao criar thumbnail para {path}: {exc}")
-        print("[wallpaper_selector] populate() terminado com sucesso")
+                print(f"[wallpaper_selector] ERROR creating thumbnail for {path}: {exc}")
+        print("[wallpaper_selector] populate() done")
 
     def bake_thumbnail(self, path: str) -> Button:
         try:
@@ -160,10 +160,10 @@ class WallpaperSelector(Window):
                 size=THUMB_SIZE,
             )
         except Exception as exc:
-            # Ficheiro com extensão de imagem mas formato inválido/sem loader
-            # (ex: webp sem gdk-pixbuf-webp instalado, ficheiro corrompido,
-            # symlink partido). Não deixamos isto derrubar o selector todo.
-            print(f"[wallpaper_selector] falhou a carregar '{path}': {exc}")
+            # File has an image extension but invalid format or no loader
+            # (e.g. webp without gdk-pixbuf-webp, corrupted file, broken
+            # symlink). Don't let this bring down the whole selector.
+            print(f"[wallpaper_selector] failed to load '{path}': {exc}")
             thumb = Label(label="⚠", name="wallpaper-thumb-error")
 
         is_current = path == self.current_wallpaper
@@ -185,10 +185,10 @@ class WallpaperSelector(Window):
         )
         return btn
 
-    # -- aplicar wallpaper -------------------------------------------------
+    # -- apply wallpaper -------------------------------------------------
 
     def apply_wallpaper(self, path: str):
-        """Aplica o wallpaper via awww de forma assíncrona (não bloqueia a UI)."""
+        """Applies the wallpaper via awww asynchronously (non-blocking)."""
         try:
             subprocess.Popen(
                 ["awww", "img", path],
@@ -196,19 +196,19 @@ class WallpaperSelector(Window):
                 stderr=subprocess.DEVNULL,
             )
         except FileNotFoundError:
-            self.title_label.set_label("Erro: awww não encontrado no PATH")
+            self.title_label.set_label("Error: awww not found in PATH")
             return
 
         wallpaper_state.write_current(path)
         self.current_wallpaper = path
         self.title_label.set_label(f"Wallpapers — {os.path.basename(path)}")
-        # re-renderiza para destacar a thumbnail selecionada
+        # re-render to highlight the selected thumbnail
         GLib.idle_add(self.populate)
         self.set_visible(False)
 
     def clear_wallpaper(self):
-        """Remove o wallpaper ativo: pinta o awww a colBg e apaga o estado
-        guardado, para que o Backdrop (backdrop.py) volte a aparecer.
+        """Clears the active wallpaper: fills awww with colBg and removes the
+        saved state so Backdrop (backdrop.py) becomes visible again.
         """
         try:
             subprocess.Popen(
@@ -217,7 +217,7 @@ class WallpaperSelector(Window):
                 stderr=subprocess.DEVNULL,
             )
         except FileNotFoundError:
-            self.title_label.set_label("Erro: awww não encontrado no PATH")
+            self.title_label.set_label("Error: awww not found in PATH")
             return
 
         wallpaper_state.clear_current()
@@ -227,7 +227,7 @@ class WallpaperSelector(Window):
         self.set_visible(False)
 
     def refresh(self):
-        """Repopula o grid (chamar ao reabrir, para refletir novos ficheiros)."""
+        """Repopulates the grid (call on reopen to pick up new files)."""
         self.populate()
         self.show_all()
 

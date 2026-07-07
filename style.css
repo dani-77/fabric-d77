@@ -298,9 +298,8 @@ tooltip>* {
     padding: 2px 4px
 }
 
-/* ── OSD (volume / brilho) ─────────────────────────────────────────────────
-   Overlay minimalista no canto superior direito: ícone + barra de progresso
-   + percentagem. */
+/* ── OSD (volume / brightness) ─────────────────────────────────────────────
+   Minimal overlay in the top-right corner: icon + progress bar + percentage. */
 #osd-box {
     padding: 10px 16px;
     min-width: 260px;
@@ -319,7 +318,7 @@ tooltip>* {
     color: var(--foreground);
 }
 
-/* Barra de progresso (Gtk.Scale não-interativa). */
+/* Progress bar (non-interactive Gtk.Scale). */
 #osd-scale {
     min-width: 140px;
     min-height: 8px;
@@ -337,7 +336,7 @@ tooltip>* {
     background-color: var(--color6);
 }
 
-/* Esconde o "slider"/handle — só queremos a barra de progresso. */
+/* Hide the slider/handle — we only want the progress bar. */
 #osd-scale slider {
     min-width: 0px;
     min-height: 0px;
@@ -346,14 +345,14 @@ tooltip>* {
     box-shadow: none;
 }
 
-/* Tonalidade diferente para o brilho. */
+/* Different tint for brightness. */
 #osd-box.brightness #osd-icon,
 #osd-scale.brightness highlight {
     color: var(--color4);
     background-color: var(--color4);
 }
 
-/* Estado mute: ícone/realce esbatidos. */
+/* Mute state: dimmed icon and highlight. */
 #osd-box.muted #osd-icon {
     color: var(--color8);
 }
@@ -484,7 +483,7 @@ tooltip>* {
     background-color: var(--color1);
 }
 
-/* Botões de sessão */
+/* Session buttons */
 #dashboard-session {
     padding: 0px;
 }
@@ -510,7 +509,7 @@ tooltip>* {
     color: var(--color8);
 }
 
-/* Botão nmtui */
+/* nmtui button */
 #dashboard-net-btn {
     padding: 8px 12px;
     border-radius: 10px;

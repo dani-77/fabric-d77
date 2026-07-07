@@ -183,7 +183,7 @@ def get_battery_info():
                 if 0 < seconds < 1000000:
                     hours = seconds // 3600
                     minutes = (seconds % 3600) // 60
-                    # Formata o tempo como (1h 45m)
+                    # Format time as (1h 45m)
                     time_str = f" ({hours}h {minutes}m)"
 
             if charging:

@@ -107,13 +107,13 @@ if __name__ == "__main__":
     signal.signal(signal.SIGUSR1, lambda signum, frame: bar.toggle_launcher())
     signal.signal(signal.SIGUSR2, lambda signum, frame: bar.popup_power_menu())
 
-    # Sinais em tempo real para acionar o OSD a partir de keybinds, caso se
-    # if you prefer the shell to apply the change (alternative to wiring keys
-    # teclas diretamente ao amixer/brightnessctl):
+    # Real-time signals to trigger the OSD from keybinds, if you prefer
+    # the shell to apply the change (alternative to wiring keys
+    # directly to amixer/brightnessctl):
     #   SIGRTMIN+1  volume +        SIGRTMIN+4  brightness +      SIGRTMIN+7  dashboard
     #   SIGRTMIN+2  volume -        SIGRTMIN+5  brightness -      SIGRTMIN+8  lock
     #   SIGRTMIN+3  mute toggle     SIGRTMIN+6  wallpaper picker
-    # Ex. (Hyprland):
+    # Example (Hyprland):
     #   bindel = , XF86AudioRaiseVolume, exec, kill -s SIGRTMIN+1 $(pgrep -f main.py)
     rtmin = signal.SIGRTMIN
     signal.signal(rtmin + 1, lambda s, f: osd.volume_up())

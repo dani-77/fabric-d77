@@ -396,6 +396,19 @@ tooltip>* {
 	color: #cccccc;
 }
 
+#wallpaper-clear-button {
+	padding: 4px 10px;
+	border-radius: 6px;
+	background-color: transparent;
+	color: #f7768e;
+	border: solid 1px rgba(247, 118, 142, 0.4);
+}
+
+#wallpaper-clear-button:hover {
+	background-color: rgba(247, 118, 142, 0.18);
+	border-color: #f7768e;
+}
+
 /* ── Info Dashboard (SIGRTMIN+7) ──────────────────────────────────────────── */
 #info-dashboard {
     padding: 16px;

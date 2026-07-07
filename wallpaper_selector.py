@@ -9,6 +9,8 @@ from fabric.widgets.scrolledwindow import ScrolledWindow
 from fabric.widgets.wayland import WaylandWindow as Window
 from gi.repository import GLib
 
+import wallpaper_state
+
 # Diretório com os wallpapers. Ajusta aqui se quiseres outro caminho.
 WALLPAPER_DIR = os.path.expanduser("~/Wallpaper")
 
@@ -17,6 +19,12 @@ VALID_EXTENSIONS = (".png", ".jpg", ".jpeg", ".webp", ".bmp")
 
 THUMB_SIZE = 160
 COLUMNS = 4
+
+# Cor (RRGGBB, sem '#') usada pelo awww ao limpar — Tokyo Night colBg,
+# a mesma do Backdrop (backdrop.py). O awww não tem noção de "sem
+# wallpaper", só de "imagem" ou "cor sólida"; quem decide se aparece o
+# backdrop decorativo por cima é o ficheiro de estado (wallpaper_state).
+CLEAR_COLOR = "1a1b26"
 
 
 class WallpaperSelector(Window):
@@ -37,7 +45,7 @@ class WallpaperSelector(Window):
             **kwargs,
         )
 
-        self.current_wallpaper: str | None = None
+        self.current_wallpaper: str | None = wallpaper_state.read_current()
 
         self.grid_box = Box(
             name="wallpaper-grid",
@@ -60,13 +68,36 @@ class WallpaperSelector(Window):
             h_align="start",
         )
 
+        self.clear_button = Button(
+            name="wallpaper-clear-button",
+            child=Box(
+                orientation="h",
+                spacing=6,
+                children=[
+                    Image(icon_name="edit-clear-all-symbolic", icon_size=14),
+                    Label(label="Clear"),
+                ],
+            ),
+            on_clicked=lambda *_: self.clear_wallpaper(),
+        )
+
+        self.header_row = Box(
+            orientation="h",
+            spacing=8,
+            children=[
+                self.title_label,
+                Box(h_expand=True),
+                self.clear_button,
+            ],
+        )
+
         self.add(
             Box(
                 name="wallpaper-selector",
                 orientation="v",
                 spacing=12,
                 children=[
-                    self.title_label,
+                    self.header_row,
                     self.scrolled,
                 ],
             )
@@ -157,20 +188,41 @@ class WallpaperSelector(Window):
     # -- aplicar wallpaper -------------------------------------------------
 
     def apply_wallpaper(self, path: str):
-        """Aplica o wallpaper via swww de forma assíncrona (não bloqueia a UI)."""
+        """Aplica o wallpaper via awww de forma assíncrona (não bloqueia a UI)."""
         try:
             subprocess.Popen(
-                ["swww", "img", path],
+                ["awww", "img", path],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
         except FileNotFoundError:
-            self.title_label.set_label("Erro: swww não encontrado no PATH")
+            self.title_label.set_label("Erro: awww não encontrado no PATH")
             return
 
+        wallpaper_state.write_current(path)
         self.current_wallpaper = path
         self.title_label.set_label(f"Wallpapers — {os.path.basename(path)}")
         # re-renderiza para destacar a thumbnail selecionada
+        GLib.idle_add(self.populate)
+        self.set_visible(False)
+
+    def clear_wallpaper(self):
+        """Remove o wallpaper ativo: pinta o awww a colBg e apaga o estado
+        guardado, para que o Backdrop (backdrop.py) volte a aparecer.
+        """
+        try:
+            subprocess.Popen(
+                ["awww", "clear", CLEAR_COLOR],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except FileNotFoundError:
+            self.title_label.set_label("Erro: awww não encontrado no PATH")
+            return
+
+        wallpaper_state.clear_current()
+        self.current_wallpaper = None
+        self.title_label.set_label("Wallpapers")
         GLib.idle_add(self.populate)
         self.set_visible(False)
 

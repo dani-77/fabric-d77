@@ -13,6 +13,7 @@ from session_menu import SessionMenu
 from osd import OSD
 from wallpaper_selector import WallpaperSelector
 from dashboard import InfoDashboard
+from backdrop import Backdrop
 
 class MainStatusBar(StatusBar):
     def __init__(self, launcher_window: AppLauncher, wallpaper_selector: WallpaperSelector, session_menu: SessionMenu, osd: OSD):
@@ -69,6 +70,11 @@ class MainStatusBar(StatusBar):
 
 
 if __name__ == "__main__":
+    # Fundo decorativo mostrado só enquanto não houver wallpaper (ver
+    # backdrop.py). Reage sozinho a mudanças no ficheiro de estado
+    # (wallpaper_state.py), não precisa de wiring extra aqui.
+    backdrop = Backdrop()
+
     launcher = AppLauncher()
     launcher.set_visible(False)
     launcher.add_keybinding("escape", lambda: launcher.set_visible(False))
@@ -90,7 +96,7 @@ if __name__ == "__main__":
     dashboard.set_visible(False)
 
     bar = MainStatusBar(launcher_window=launcher, session_menu=session_menu, wallpaper_selector=wallpaper_selector, osd=osd)
-    app = Application("d77-shell", bar, launcher, session_menu, osd, wallpaper_selector, dashboard)
+    app = Application("d77-shell", bar, launcher, session_menu, osd, wallpaper_selector, dashboard, backdrop)
 
     signal.signal(signal.SIGUSR1, lambda signum, frame: bar.toggle_launcher())
     signal.signal(signal.SIGUSR2, lambda signum, frame: bar.popup_power_menu())

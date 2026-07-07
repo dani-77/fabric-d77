@@ -65,6 +65,7 @@ class LockScreen:
         self._lock = None
         self._locked = False
         self._windows = []
+        self._fabricators = []
 
     @property
     def supported(self) -> bool:
@@ -96,13 +97,16 @@ class LockScreen:
         window.get_style_context().add_class("lock-screen")
 
         clock_label = Label(name="lock-clock")
-        clock_label.build(
-            lambda lbl: Fabricator(
-                interval=1000,
-                poll_from=lambda f: datetime.now().strftime("%H:%M"),
-                on_changed=lambda _, value: lbl.set_label(value),
-            )
+
+        # Keep a reference so we can stop it on unlock — without this the
+        # Fabricator keeps firing after the window is destroyed and corrupts
+        # the GTK main loop.
+        fab = Fabricator(
+            interval=1000,
+            poll_from=lambda f: datetime.now().strftime("%H:%M"),
+            on_changed=lambda _, value: clock_label.set_label(value),
         )
+        self._fabricators.append(fab)
 
         status_label = Label(name="lock-status", label="")
 
@@ -162,6 +166,9 @@ class LockScreen:
         self._locked = False
 
     def _destroy_windows(self):
+        for fab in self._fabricators:
+            fab.stop()
+        self._fabricators = []
         for window in self._windows:
             window.destroy()
         self._windows = []

@@ -14,6 +14,7 @@ from osd import OSD
 from wallpaper_selector import WallpaperSelector
 from dashboard import InfoDashboard
 from backdrop import Backdrop
+from lockscreen import LockScreen
 
 class MainStatusBar(StatusBar):
     def __init__(self, launcher_window: AppLauncher, wallpaper_selector: WallpaperSelector, session_menu: SessionMenu, osd: OSD):
@@ -79,7 +80,12 @@ if __name__ == "__main__":
     launcher.set_visible(False)
     launcher.add_keybinding("escape", lambda: launcher.set_visible(False))
 
-    session_menu = SessionMenu()
+    # Locker nativo (ext-session-lock-v1 via GtkSessionLock), com fallback
+    # automático para swaylock/hyprlock/loginctl (session_actions.lock) caso
+    # o protocolo ou o PAM não estejam disponíveis — ver lockscreen.py.
+    lockscreen = LockScreen()
+
+    session_menu = SessionMenu(on_lock=lockscreen.lock)
     session_menu.set_visible(False)
 
     wallpaper_selector = WallpaperSelector()
@@ -104,9 +110,9 @@ if __name__ == "__main__":
     # Sinais em tempo real para acionar o OSD a partir de keybinds, caso se
     # prefira que seja a shell a aplicar a alteração (alternativa a ligar as
     # teclas diretamente ao amixer/brightnessctl):
-    #   SIGRTMIN+1  volume +        SIGRTMIN+4  brilho +
-    #   SIGRTMIN+2  volume -        SIGRTMIN+5  brilho -
-    #   SIGRTMIN+3  mute toggle
+    #   SIGRTMIN+1  volume +        SIGRTMIN+4  brilho +          SIGRTMIN+7  dashboard
+    #   SIGRTMIN+2  volume -        SIGRTMIN+5  brilho -          SIGRTMIN+8  lock
+    #   SIGRTMIN+3  mute toggle     SIGRTMIN+6  wallpaper picker
     # Ex. (Hyprland):
     #   bindel = , XF86AudioRaiseVolume, exec, kill -s SIGRTMIN+1 $(pgrep -f main.py)
     rtmin = signal.SIGRTMIN
@@ -117,7 +123,8 @@ if __name__ == "__main__":
     signal.signal(rtmin + 5, lambda s, f: osd.brightness_down())
     signal.signal(rtmin + 6, lambda s, f: bar.toggle_wallpaper_selector())
     signal.signal(rtmin + 7, lambda s, f: dashboard.toggle())
-    
+    signal.signal(rtmin + 8, lambda s, f: lockscreen.lock())
+
     style_path = get_relative_path("./style.css")
     if os.path.exists(style_path):
         app.set_stylesheet_from_file(style_path)

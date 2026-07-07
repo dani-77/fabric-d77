@@ -1,0 +1,177 @@
+"""Native screen locker for fabric-d77.
+
+Unlike ``session_actions.lock()`` (which just shells out to swaylock /
+hyprlock / loginctl), this module implements a *real* locker backed by the
+``ext-session-lock-v1`` Wayland protocol via the GtkSessionLock library
+(https://github.com/Cu3PO42/gtk-session-lock, the library gtklock is built
+on). That means the compositor itself enforces the lock — not just a
+fullscreen window on top — mirroring how the lockscreen was implemented in
+quickshell-d77 (there via Quickshell's native WlSessionLock support).
+
+Requirements:
+  - The ``gtk-session-lock`` C library + GObject introspection typelib
+    installed system-wide (build from source, or your distro's package —
+    e.g. the AUR ``gtk-session-lock`` package on Arch). Not a pip package.
+  - ``python-pam`` (already in requirements.txt) for password verification.
+  - A PAM service file at /etc/pam.d/fabric-d77, e.g.:
+        auth	include	system-auth
+        account	include	system-auth
+    (Debian/Ubuntu: replace "system-auth" with "common-auth"/"common-account".)
+    Without it PAM fails closed (falls through to /etc/pam.d/other, which
+    denies by default on most distros) — the lock screen stays up, it just
+    can't be unlocked.
+
+If the protocol isn't supported by the compositor, the library isn't
+installed, or PAM isn't available, ``lock()`` transparently falls back to
+``session_actions.lock()``.
+"""
+
+import getpass
+import threading
+from datetime import datetime
+
+import gi
+
+gi.require_version("Gtk", "3.0")
+try:
+    gi.require_version("GtkSessionLock", "0.1")
+    from gi.repository import GtkSessionLock
+    _HAS_SESSION_LOCK = True
+except (ValueError, ImportError):
+    _HAS_SESSION_LOCK = False
+
+from gi.repository import Gdk, GLib, Gtk
+
+try:
+    import pam
+    _HAS_PAM = True
+except ImportError:
+    _HAS_PAM = False
+
+import session_actions
+from fabric import Fabricator
+from fabric.widgets.box import Box
+from fabric.widgets.entry import Entry
+from fabric.widgets.image import Image
+from fabric.widgets.label import Label
+
+PAM_SERVICE = "fabric-d77"
+
+
+class LockScreen:
+    """Owns at most one active session lock at a time."""
+
+    def __init__(self):
+        self._lock = None
+        self._locked = False
+        self._windows = []
+
+    @property
+    def supported(self) -> bool:
+        return _HAS_SESSION_LOCK and _HAS_PAM and GtkSessionLock.is_supported()
+
+    def lock(self, *_):
+        if self._locked:
+            return
+        if not self.supported:
+            session_actions.lock()
+            return
+
+        self._locked = True
+        self._lock = GtkSessionLock.prepare_lock()
+        self._lock.connect("finished", self._on_finished)
+        self._lock.lock_lock()
+
+        display = Gdk.Display.get_default()
+        self._windows = []
+        for i in range(display.get_n_monitors()):
+            monitor = display.get_monitor(i)
+            window = self._build_surface()
+            self._lock.new_surface(window, monitor)
+            window.show_all()
+            self._windows.append(window)
+
+    def _build_surface(self) -> Gtk.Window:
+        window = Gtk.Window()
+        window.get_style_context().add_class("lock-screen")
+
+        clock_label = Label(name="lock-clock")
+        clock_label.build(
+            lambda lbl: Fabricator(
+                interval=1000,
+                poll_from=lambda f: datetime.now().strftime("%H:%M"),
+                on_changed=lambda _, value: lbl.set_label(value),
+            )
+        )
+
+        status_label = Label(name="lock-status", label="")
+
+        entry = Entry(
+            name="lock-entry",
+            placeholder="Password",
+            password=True,
+            h_align="center",
+        )
+        entry.connect("activate", lambda *_: self._try_unlock(entry, status_label))
+
+        window.add(
+            Box(
+                orientation="v",
+                spacing=16,
+                h_align="center",
+                v_align="center",
+                children=[
+                    Image(icon_name="system-lock-screen-symbolic", icon_size=48),
+                    clock_label,
+                    entry,
+                    status_label,
+                ],
+            )
+        )
+        window.connect("map", lambda *_: entry.grab_focus())
+        return window
+
+    def _try_unlock(self, entry: Entry, status_label: Label):
+        password = entry.get_text()
+        entry.set_text("")
+        entry.set_sensitive(False)
+        status_label.set_label("Checking…")
+        username = getpass.getuser()
+
+        def worker():
+            ok = pam.pam().authenticate(username, password, service=PAM_SERVICE)
+            GLib.idle_add(self._on_auth_result, entry, status_label, ok)
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _on_auth_result(self, entry: Entry, status_label: Label, ok: bool) -> bool:
+        if ok:
+            self._unlock()
+        else:
+            status_label.set_label("Wrong password")
+            entry.set_sensitive(True)
+            entry.grab_focus()
+        return False
+
+    def _unlock(self):
+        if self._lock is not None:
+            self._lock.unlock_and_destroy()
+            Gdk.Display.get_default().sync()
+            self._lock = None
+        self._destroy_windows()
+        self._locked = False
+
+    def _destroy_windows(self):
+        for window in self._windows:
+            window.destroy()
+        self._windows = []
+
+    def _on_finished(self, *_):
+        # The compositor could not (or can no longer) hold the lock — e.g.
+        # the protocol request was rejected, or another locker took over.
+        # Fall back to an external locker so the screen never ends up
+        # silently unlocked.
+        self._lock = None
+        self._destroy_windows()
+        self._locked = False
+        session_actions.lock()

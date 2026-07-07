@@ -527,6 +527,40 @@ tooltip>* {
     color: var(--color4);
 }
 
+/* ── Lock screen (ext-session-lock-v1 via GtkSessionLock, SIGRTMIN+8) ─────── */
+.lock-screen {
+    background-color: var(--background);
+}
+
+#lock-clock {
+    font-size: 48px;
+    font-weight: 900;
+    color: var(--foreground);
+}
+
+#lock-entry {
+    background-color: var(--module-bg);
+    color: var(--foreground);
+    padding: 10px 16px;
+    min-width: 220px;
+    border-radius: 100px;
+    border: solid 1px transparent;
+}
+
+#lock-entry:focus {
+    border-color: var(--ws-active);
+    outline-style: solid;
+    outline-width: 2px;
+    outline-color: var(--ws-active);
+    outline-offset: -2px;
+}
+
+#lock-status {
+    color: var(--color6);
+    font-size: 11px;
+    min-height: 14px;
+}
+
 #wallpaper-button {
     padding: 0px 10px;
     background-color: var(--module-bg);

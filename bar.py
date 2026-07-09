@@ -121,9 +121,18 @@ class VolumeWidget(Box):
         if not self.audio.speaker:
             return
         self.label.set_label(f"{int(self.audio.speaker.volume)}%")
+        self._update_icon()
+        self.audio.speaker.connect("changed", lambda *_: self._update_icon())
         return self.audio.speaker.bind(
             "volume", "label", self.label, lambda _, v: f"{int(v)}%"
         )
+
+    def _update_icon(self):
+        speaker = self.audio.speaker
+        if not speaker:
+            return
+        icon_name = "audio-volume-muted-symbolic" if speaker.muted else "audio-speakers-symbolic"
+        self.icon.set_from_icon_name(icon_name, 14)
 
 
 def get_wifi_details():

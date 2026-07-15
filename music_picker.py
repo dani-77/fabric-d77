@@ -5,10 +5,17 @@ playback of the picked album in cmus. Mirrors launcher.py's search+list
 pattern (Entry + filtered ScrolledWindow), swapping desktop apps for album
 folders and launch_app() for cmus_play_album().
 Opened from the dashboard's "Browse albums" button (dashboard.py).
+
+Album.artist/title are read from the audio tags (album_artist/artist/album,
+via ffprobe on one file per folder) rather than the Artist/Album directory
+names, since folder names don't always match the tagged metadata. Falls
+back to the directory name whenever ffprobe is missing or a tag is empty.
 """
 
 import operator
 import os
+import shutil
+import subprocess
 import threading
 from collections.abc import Iterator
 
@@ -25,6 +32,9 @@ from cmus_control import cmus_play_album
 
 MUSIC_DIR = os.path.expanduser("~/Música")
 
+_AUDIO_EXTS = (".mp3", ".flac", ".ogg", ".opus", ".m4a", ".wav", ".wma")
+_HAVE_FFPROBE = shutil.which("ffprobe") is not None
+
 
 class Album:
     __slots__ = ("artist", "title", "path")
@@ -33,6 +43,53 @@ class Album:
         self.artist = artist
         self.title = title
         self.path = path
+
+
+def _first_audio_file(album_dir: str) -> str | None:
+    try:
+        entries = sorted(os.listdir(album_dir))
+    except OSError:
+        return None
+    for name in entries:
+        if name.lower().endswith(_AUDIO_EXTS):
+            path = os.path.join(album_dir, name)
+            if os.path.isfile(path):
+                return path
+    return None
+
+
+def _read_album_tags(album_dir: str) -> tuple[str | None, str | None]:
+    """Reads (artist, album) from the first audio file's tags via ffprobe.
+
+    Prefers the album_artist tag over artist. Returns (None, None) when
+    ffprobe isn't installed, no audio file is found, or the file carries
+    none of these tags — callers fall back to the directory name.
+    """
+    if not _HAVE_FFPROBE:
+        return None, None
+    audio_file = _first_audio_file(album_dir)
+    if audio_file is None:
+        return None, None
+    try:
+        result = subprocess.run(
+            [
+                "ffprobe", "-v", "error",
+                "-show_entries", "format_tags=album_artist,artist,album",
+                "-of", "default=noprint_wrappers=1:nokey=0",
+                audio_file,
+            ],
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, timeout=5,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None, None
+    if result.returncode != 0:
+        return None, None
+    tags: dict[str, str] = {}
+    for line in result.stdout.splitlines():
+        if line.startswith("TAG:"):
+            key, _, value = line[4:].partition("=")
+            tags[key.lower()] = value.strip()
+    return tags.get("album_artist") or tags.get("artist") or None, tags.get("album") or None
 
 
 def _scan_albums(root: str) -> list[Album]:
@@ -46,7 +103,8 @@ def _scan_albums(root: str) -> list[Album]:
         for album in sorted(os.listdir(artist_dir)):
             album_dir = os.path.join(artist_dir, album)
             if os.path.isdir(album_dir):
-                albums.append(Album(artist, album, album_dir))
+                tag_artist, tag_album = _read_album_tags(album_dir)
+                albums.append(Album(tag_artist or artist, tag_album or album, album_dir))
     return albums
 
 

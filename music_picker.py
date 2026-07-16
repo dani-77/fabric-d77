@@ -147,6 +147,11 @@ def _scan_albums(root: str) -> list[Album]:
     The last path segment of a directory is always the album folder; the
     one above it (if any) is the artist folder, used whenever ffprobe tags
     don't supply one.
+    The same album can also physically live under more than one directory
+    (e.g. an unsorted import folder alongside its organized copy under
+    root) — directory-path dedup above can't catch that since the paths
+    genuinely differ, so entries are further deduped by (artist, album)
+    tag identity below, keeping the first one found.
     """
     album_dirs: set[str] = _cmus_library_dirs()
     if os.path.isdir(root):
@@ -155,12 +160,19 @@ def _scan_albums(root: str) -> list[Album]:
                 album_dirs.add(dirpath)
 
     albums = []
+    seen: set[tuple[str, str]] = set()
     for album_dir in sorted(album_dirs):
         parts = album_dir.rstrip(os.sep).split(os.sep)
         dir_album = parts[-1]
         dir_artist = parts[-2] if len(parts) > 1 else "Unknown Artist"
         tag_artist, tag_album = _read_album_tags(album_dir)
-        albums.append(Album(tag_artist or dir_artist, tag_album or dir_album, album_dir))
+        artist = tag_artist or dir_artist
+        title = tag_album or dir_album
+        key = (artist.casefold(), title.casefold())
+        if key in seen:
+            continue
+        seen.add(key)
+        albums.append(Album(artist, title, album_dir))
     return albums
 
 

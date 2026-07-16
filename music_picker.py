@@ -1,9 +1,11 @@
 """Music Picker — fabric-d77.
 
-Search popup to browse Artist/Album folders under MUSIC_DIR and start
-playback of the picked album in cmus. Mirrors launcher.py's search+list
-pattern (Entry + filtered ScrolledWindow), swapping desktop apps for album
-folders and launch_app() for cmus_play_album().
+Search popup to browse albums — sourced from the union of cmus's own live
+library (whatever directories have been :add-ed to it, wherever they
+live) and a scan of MUSIC_DIR — and start playback of the picked album in
+cmus. Mirrors launcher.py's search+list pattern (Entry + filtered
+ScrolledWindow), swapping desktop apps for album folders and
+launch_app() for cmus_play_album().
 Opened from the dashboard's "Browse albums" button (dashboard.py).
 
 Album.artist/title are read from the audio tags (album_artist/artist/album,
@@ -30,7 +32,28 @@ from fabric.utils import idle_add, remove_handler
 
 from cmus_control import cmus_play_album
 
-MUSIC_DIR = os.path.expanduser("~/Música")
+def _default_music_dir() -> str:
+    """Resolves MUSIC_DIR from `xdg-user-dir MUSIC` so it follows whatever
+    the user has configured in user-dirs.dirs instead of being hardcoded
+    here; falls back to ~/Música when xdg-user-dir is missing, fails, or
+    MUSIC isn't set (xdg-user-dir then just echoes $HOME back).
+    """
+    home = os.path.expanduser("~")
+    if shutil.which("xdg-user-dir"):
+        try:
+            result = subprocess.run(
+                ["xdg-user-dir", "MUSIC"],
+                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, timeout=2,
+            )
+            d = result.stdout.strip()
+            if d and d != home:
+                return d
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+    return os.path.join(home, "Música")
+
+
+MUSIC_DIR = _default_music_dir()
 
 _AUDIO_EXTS = (".mp3", ".flac", ".ogg", ".opus", ".m4a", ".wav", ".wma")
 _HAVE_FFPROBE = shutil.which("ffprobe") is not None
@@ -92,19 +115,52 @@ def _read_album_tags(album_dir: str) -> tuple[str | None, str | None]:
     return tags.get("album_artist") or tags.get("artist") or None, tags.get("album") or None
 
 
+def _cmus_library_dirs() -> set[str]:
+    """Returns the set of directories holding every file in cmus's live
+    library (`cmus-remote -C "save -l -"`, a plain path-per-line dump) —
+    however many separate roots the user has :add-ed, wherever they live
+    (~/Música, ~/Audio, a mounted drive, ...). Empty when cmus isn't
+    running or its library has nothing in it.
+    """
+    try:
+        result = subprocess.run(
+            ["cmus-remote", "-C", "save -l -"],
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, timeout=5,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return set()
+    if result.returncode != 0:
+        return set()
+    return {
+        os.path.dirname(line) for line in result.stdout.splitlines() if line.strip()
+    }
+
+
 def _scan_albums(root: str) -> list[Album]:
+    """Album directories are the union of cmus's own live library (see
+    _cmus_library_dirs) and a hand walk of root for directories directly
+    containing audio files — any depth, so this covers both a flat layout
+    (Album folders straight under root) and a nested one (Artist/Album, or
+    deeper). Deduplicated, so a directory in both is only listed once —
+    this way nothing is hidden just because it hasn't been :add-ed to cmus
+    yet, and nothing outside root is hidden just because cmus isn't running.
+    The last path segment of a directory is always the album folder; the
+    one above it (if any) is the artist folder, used whenever ffprobe tags
+    don't supply one.
+    """
+    album_dirs: set[str] = _cmus_library_dirs()
+    if os.path.isdir(root):
+        for dirpath, _dirnames, filenames in os.walk(root):
+            if any(name.lower().endswith(_AUDIO_EXTS) for name in filenames):
+                album_dirs.add(dirpath)
+
     albums = []
-    if not os.path.isdir(root):
-        return albums
-    for artist in sorted(os.listdir(root)):
-        artist_dir = os.path.join(root, artist)
-        if not os.path.isdir(artist_dir):
-            continue
-        for album in sorted(os.listdir(artist_dir)):
-            album_dir = os.path.join(artist_dir, album)
-            if os.path.isdir(album_dir):
-                tag_artist, tag_album = _read_album_tags(album_dir)
-                albums.append(Album(tag_artist or artist, tag_album or album, album_dir))
+    for album_dir in sorted(album_dirs):
+        parts = album_dir.rstrip(os.sep).split(os.sep)
+        dir_album = parts[-1]
+        dir_artist = parts[-2] if len(parts) > 1 else "Unknown Artist"
+        tag_artist, tag_album = _read_album_tags(album_dir)
+        albums.append(Album(tag_artist or dir_artist, tag_album or dir_album, album_dir))
     return albums
 
 

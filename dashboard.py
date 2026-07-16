@@ -16,7 +16,10 @@ import psutil
 from gi.repository import GLib
 
 import session_actions
-from cmus_control import cmus_status, cmus_skip_album, start_cmus_headless
+from cmus_control import (
+    cmus_status, cmus_skip_album, cmus_prev, cmus_toggle, cmus_next,
+    start_cmus_headless,
+)
 from fabric.core.fabricator import Fabricator
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
@@ -212,14 +215,11 @@ class InfoDashboard(Window):
             icon_name="media-playback-start-symbolic", icon_size=32,
         )
 
-        def _cmus_btn(icon: str, cmd_args: list) -> Button:
+        def _cmus_btn(icon: str, action) -> Button:
             return Button(
                 name="dashboard-cmus-btn",
                 child=Image(icon_name=icon, icon_size=32),
-                on_clicked=lambda *_: subprocess.run(
-                    ["cmus-remote"] + cmd_args,
-                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                ),
+                on_clicked=lambda *_: action(),
             )
 
         def _cmus_album_btn(icon: str, direction: int) -> Button:
@@ -244,16 +244,13 @@ class InfoDashboard(Window):
                     spacing=2,
                     children=[
                         _cmus_album_btn("media-seek-backward-symbolic", -1),
-                        _cmus_btn("media-skip-backward-symbolic", ["-r"]),
+                        _cmus_btn("media-skip-backward-symbolic", cmus_prev),
                         Button(
                             name="dashboard-cmus-btn",
                             child=self._playpause_icon,
-                            on_clicked=lambda *_: subprocess.run(
-                                ["cmus-remote", "-u"],
-                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                            ),
+                            on_clicked=lambda *_: cmus_toggle(),
                         ),
-                        _cmus_btn("media-skip-forward-symbolic", ["-n"]),
+                        _cmus_btn("media-skip-forward-symbolic", cmus_next),
                         _cmus_album_btn("media-seek-forward-symbolic", 1),
                     ],
                 ),

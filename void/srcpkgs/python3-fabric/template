@@ -1,0 +1,28 @@
+# Template file for 'python3-fabric'
+# Not packaged upstream in void-packages, so fabric-d77 needs this local
+# template alongside it. Tracks the same commit pinned in fabric-d77's
+# requirements.txt (git+https://github.com/Fabric-Development/fabric.git@...).
+pkgname=python3-fabric
+version=0.0.2
+revision=1
+build_style=python3-pep517
+hostmakedepends="python3-setuptools python3-wheel"
+depends="python3-click python3-loguru python3-cairo python3-gobject python3-psutil"
+short_desc="Next-gen Python framework for building desktop widgets"
+maintainer="Daniel Azevedo <daniazevedo77@gmail.com>"
+license="AGPL-3.0-only"
+homepage="https://github.com/Fabric-Development/fabric"
+
+_commit=23cab85fc61f1cdbb5f60db0027dc57026ba05b7
+distfiles="https://github.com/Fabric-Development/fabric/archive/${_commit}.tar.gz"
+wrksrc="fabric-${_commit}"
+
+# PLACEHOLDER: this session couldn't reach Fabric-Development/fabric to
+# compute the real hash. Run `./xbps-src pkg python3-fabric` once - it
+# fetches the tarball, fails on the checksum mismatch, and prints the
+# actual sha256 to paste in below.
+checksum=0000000000000000000000000000000000000000000000000000000000000000
+
+post_install() {
+	vlicense LICENSE
+}

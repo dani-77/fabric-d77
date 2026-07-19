@@ -1,0 +1,4 @@
+#!/bin/sh
+# Launches the shell from a real system install (see PKGBUILD), where all
+# Python dependencies live in the system site-packages and no venv exists.
+exec python3 /usr/share/fabric-d77/main.py "$@"

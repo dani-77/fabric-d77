@@ -4,7 +4,33 @@ d77-shell is a simple GTK desktop shell built on top of Fabric and Python.
 
 ![sample](sample.png)
 
-To install:
+## Installing
+
+### Option A: Arch package (recommended)
+
+A `PKGBUILD` is included that installs every Python dependency as a real
+system package (repo + AUR) — no venv, no pip, nothing fetched at runtime.
+
+```
+git clone https://github.com/dani-77/fabric-d77.git
+cd fabric-d77
+makepkg -si
+```
+
+This installs the shell to `/usr/share/fabric-d77`, the `/usr/bin/fabric-d77`
+launcher, `/usr/bin/fabric-d77-signal`, and the PAM service file — all at
+install time, so no `sudo make install` or runtime `pkexec` prompt is needed
+afterwards. Run it with `fabric-d77`, or bind it directly in your compositor
+config (e.g. `exec fabric-d77` in Hyprland/sway).
+
+### Option B: Void Linux package (no venv)
+
+`xbps-src` templates live under `void/srcpkgs/` for the same no-venv,
+system-package install on Void Linux. See [`void/README.md`](void/README.md)
+for how to drop them into a `void-packages` checkout and build with
+`xbps-src`.
+
+### Option C: manual install / other distros (venv)
 
 1 - Clone the Repository
 
@@ -29,6 +55,11 @@ pip install -r requirements.txt
 ```
 ~/.config/fabric-d77/./start.sh
 ```
+
+`start.sh` also doubles as the fallback launcher: if `/usr/share/fabric-d77`
+isn't present (i.e. neither the Arch nor the Void package is installed), it
+falls back to a pre-built ISO venv, then a local `venv/`, auto-creating the
+latter on first run if neither exists.
 
 ## OSD (volume & brightness)
 

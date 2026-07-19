@@ -6,3 +6,8 @@ venv/
 .env/
 .venv/
 
+# makepkg build artifacts
+pkg/
+src/
+*.pkg.tar.*
+

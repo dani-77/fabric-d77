@@ -13,6 +13,9 @@ if [ ! -f "$PAM_DEST" ]; then
     fi
 fi
 
+# real system package (PKGBUILD): deps are system Python packages, no venv
+SYSTEM_SHARE="/usr/share/fabric-d77"
+
 # pre-built venv from the ISO (fixed path, no network needed)
 SYSTEM_VENV="/etc/xdg/fabric-d77/venv"
 SYSTEM_SRC="/etc/xdg/fabric-d77"
@@ -21,7 +24,9 @@ SYSTEM_SRC="/etc/xdg/fabric-d77"
 USER_DIR="$HOME/.config/fabric-d77"
 USER_VENV="$USER_DIR/venv"
 
-if [ -d "$SYSTEM_VENV" ]; then
+if [ -f "$SYSTEM_SHARE/main.py" ]; then
+    exec python3 "$SYSTEM_SHARE/main.py"
+elif [ -d "$SYSTEM_VENV" ]; then
     source "$SYSTEM_VENV/bin/activate"
     exec python "$SYSTEM_SRC/main.py"
 elif [ -d "$USER_VENV" ]; then

@@ -23,7 +23,14 @@ install time, so no `sudo make install` or runtime `pkexec` prompt is needed
 afterwards. Run it with `fabric-d77`, or bind it directly in your compositor
 config (e.g. `exec fabric-d77` in Hyprland/sway).
 
-### Option B: manual install / other distros (venv)
+### Option B: Void Linux package (no venv)
+
+`xbps-src` templates live under `void/srcpkgs/` for the same no-venv,
+system-package install on Void Linux. See [`void/README.md`](void/README.md)
+for how to drop them into a `void-packages` checkout and build with
+`xbps-src`.
+
+### Option C: manual install / other distros (venv)
 
 1 - Clone the Repository
 
@@ -50,9 +57,9 @@ pip install -r requirements.txt
 ```
 
 `start.sh` also doubles as the fallback launcher: if `/usr/share/fabric-d77`
-isn't present (i.e. the Arch package isn't installed), it falls back to a
-pre-built ISO venv, then a local `venv/`, auto-creating the latter on first
-run if neither exists.
+isn't present (i.e. neither the Arch nor the Void package is installed), it
+falls back to a pre-built ISO venv, then a local `venv/`, auto-creating the
+latter on first run if neither exists.
 
 ## OSD (volume & brightness)
 

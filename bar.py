@@ -50,11 +50,15 @@ def _detect_compositor() -> str:
         return "sway"
     if os.environ.get("I3SOCK"):
         return "i3"
+    if os.environ.get("NIRI_SOCKET"):
+        return "niri"
     desktop = os.environ.get("XDG_CURRENT_DESKTOP", "").lower()
     if "hyprland" in desktop:
         return "hyprland"
     if "sway" in desktop:
         return "sway"
+    if "niri" in desktop:
+        return "niri"
     return "unknown"
 
 
@@ -73,6 +77,9 @@ def _create_workspaces_widget(**kwargs):
             buttons_factory=lambda ws_id: WorkspaceButton(id=ws_id, label=None),
             **kwargs,
         )
+    if compositor == "niri":
+        from niri import NiriWorkspaces
+        return NiriWorkspaces(**kwargs)
     # Unsupported compositor — caller should check for None and skip the widget.
     return None
 

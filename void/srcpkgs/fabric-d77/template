@@ -2,7 +2,7 @@
 # See void/README.md in the fabric-d77 repo for how to build this with xbps-src.
 pkgname=fabric-d77
 version=1.0.0
-revision=1
+revision=2
 depends="python3 python3-gobject python3-cairo python3-cffi python3-click
  python3-loguru python3-Pillow python3-psutil python3-rapidfuzz
  python3-setproctitle python3-six python3-pam python3-thefuzz
@@ -26,7 +26,7 @@ do_install() {
 	vcopy assets usr/share/fabric-d77
 	vcopy style.css usr/share/fabric-d77
 
-	vbin bin/fabric-d77
+	vbin ${FILESDIR}/fabric-d77
 	vbin bin/fabric-d77-signal
 
 	vinstall pam/fabric-d77 644 etc/pam.d fabric-d77

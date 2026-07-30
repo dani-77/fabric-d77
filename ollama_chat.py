@@ -18,7 +18,7 @@ STATUS_POLL_SECONDS = 5
 CONFIG_DIR = os.path.expanduser("~/.config/ollama-chat")
 CONFIG_FILE = os.path.join(CONFIG_DIR, "model.conf")
 FALLBACK_MODEL = "qwen2.5:0.5b"
-INSTALL_SENTINEL = "+ instalar novo modelo..."
+INSTALL_SENTINEL = "+ install new model..."
 
 
 class OllamaChat(Box):
@@ -39,12 +39,12 @@ class OllamaChat(Box):
         self.model_combo.set_active(0)
         self.model_combo.connect("changed", self.on_model_changed)
 
-        # Só aparece texto aqui quando há algo a acontecer (pull em curso, erro, etc.)
+        # Text only shows up here when something is happening (pull in progress, error, etc.)
         self.info_label = Label(label="", h_align="start")
         self.info_label.set_no_show_all(True)
         self.info_label.hide()
 
-        self.install_entry = Entry(placeholder="nome-do-modelo:tag (ex: llama3.2:3b)")
+        self.install_entry = Entry(placeholder="model-name:tag (e.g. llama3.2:3b)")
         self.install_entry.set_no_show_all(True)
         self.install_entry.hide()
         self.install_entry.connect("activate", self.on_install_submit)
@@ -56,7 +56,7 @@ class OllamaChat(Box):
 
         self.output = Label(label="", line_wrap=True, h_align="start")
         self.scroll = ScrolledWindow(child=self.output, v_expand=True)
-        self.entry = Entry(placeholder="Pergunta à IA...", on_activate=self.on_submit)
+        self.entry = Entry(placeholder="Ask the AI...", on_activate=self.on_submit)
 
         self.add(header)
         self.add(self.info_label)
@@ -81,7 +81,7 @@ class OllamaChat(Box):
         with open(CONFIG_FILE, "w") as f:
             f.write(model)
 
-    # ---------- Info label (só aparece quando relevante) ----------
+    # ---------- Info label (only shown when relevant) ----------
 
     def show_info(self, text):
         self.info_label.set_label(text)
@@ -107,7 +107,7 @@ class OllamaChat(Box):
 
     def populate_model_combo(self, models):
         if self.installing:
-            return False  # não mexe no combo a meio de um pull
+            return False  # don't touch the combo mid-pull
 
         if models is None:
             GLib.timeout_add_seconds(5, lambda: self.refresh_model_list() or False)
@@ -150,7 +150,7 @@ class OllamaChat(Box):
             self.save_model(selected)
             self.hide_info()
 
-    # ---------- Instalar novo modelo ----------
+    # ---------- Install new model ----------
 
     def on_install_submit(self, entry):
         model_name = entry.get_text().strip()
@@ -175,7 +175,7 @@ class OllamaChat(Box):
                     continue
                 chunk = json.loads(line)
                 if "error" in chunk:
-                    GLib.idle_add(self.show_info, f"Erro a instalar '{model_name}': {chunk['error']}")
+                    GLib.idle_add(self.show_info, f"Error installing '{model_name}': {chunk['error']}")
                     GLib.idle_add(self.finish_install, None)
                     return
 
@@ -184,18 +184,18 @@ class OllamaChat(Box):
                 completed = chunk.get("completed")
                 if total and completed:
                     pct = int(completed / total * 100)
-                    GLib.idle_add(self.show_info, f"A instalar '{model_name}': {status} ({pct}%)")
+                    GLib.idle_add(self.show_info, f"Installing '{model_name}': {status} ({pct}%)")
                 else:
-                    GLib.idle_add(self.show_info, f"A instalar '{model_name}': {status}")
+                    GLib.idle_add(self.show_info, f"Installing '{model_name}': {status}")
 
-            GLib.idle_add(self.show_info, f"'{model_name}' instalado com sucesso.")
+            GLib.idle_add(self.show_info, f"'{model_name}' installed successfully.")
             GLib.idle_add(self.finish_install, model_name)
 
         except requests.exceptions.ConnectionError:
-            GLib.idle_add(self.show_info, "Ollama não está a correr — não foi possível instalar.")
+            GLib.idle_add(self.show_info, "Ollama isn't running — couldn't install.")
             GLib.idle_add(self.finish_install, None)
         except Exception as e:
-            GLib.idle_add(self.show_info, f"Erro inesperado a instalar '{model_name}': {e}")
+            GLib.idle_add(self.show_info, f"Unexpected error installing '{model_name}': {e}")
             GLib.idle_add(self.finish_install, None)
 
     def finish_install(self, new_model):
@@ -203,7 +203,7 @@ class OllamaChat(Box):
         if new_model:
             self.saved_model = new_model
         self.refresh_model_list()
-        # esconde a mensagem de sucesso passado um tempo
+        # hide the success message after a while
         GLib.timeout_add_seconds(6, lambda: self.hide_info() or False)
         return False
 
@@ -261,21 +261,21 @@ class OllamaChat(Box):
                     continue
                 chunk = json.loads(line)
                 if "error" in chunk:
-                    self.append_text(f"\n[erro do modelo: {chunk['error']}]\n")
+                    self.append_text(f"\n[model error: {chunk['error']}]\n")
                     return
                 self.append_text(chunk.get("response", ""))
 
         except requests.exceptions.ConnectionError:
-            self.append_text("\n[Ollama não está a correr. Verifica com: sv status ollama]\n")
+            self.append_text("\n[Ollama isn't running. Check with: sv status ollama]\n")
         except requests.exceptions.Timeout:
-            self.append_text("\n[Ollama demorou demasiado a responder — timeout]\n")
+            self.append_text("\n[Ollama took too long to respond — timeout]\n")
         except requests.exceptions.HTTPError as e:
             if e.response is not None and e.response.status_code == 404:
-                self.append_text(f"\n[Modelo '{self.current_model}' não encontrado.]\n")
+                self.append_text(f"\n[Model '{self.current_model}' not found.]\n")
             else:
-                self.append_text(f"\n[erro HTTP: {e}]\n")
+                self.append_text(f"\n[HTTP error: {e}]\n")
         except Exception as e:
-            self.append_text(f"\n[erro inesperado: {e}]\n")
+            self.append_text(f"\n[unexpected error: {e}]\n")
 
     def append_text(self, text):
         current = self.output.get_label() or ""

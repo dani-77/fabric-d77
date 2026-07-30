@@ -5,9 +5,12 @@ import threading
 import time
 import requests
 from fabric.widgets.box import Box
+from fabric.widgets.button import Button
 from fabric.widgets.entry import Entry
+from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
+from fabric.widgets.wayland import WaylandWindow as Window
 from gi.repository import GLib, Gtk
 
 OLLAMA_BASE = "http://127.0.0.1:11434"
@@ -277,3 +280,54 @@ class OllamaChat(Box):
     def append_text(self, text):
         current = self.output.get_label() or ""
         self.output.set_label(current + text)
+
+
+class OllamaChatWindow(Window):
+    """Standalone popup hosting OllamaChat — triggered by SIGRTMIN+9 in main.py."""
+
+    def __init__(self, **kwargs):
+        super().__init__(
+            layer="overlay",
+            anchor="center",
+            exclusivity="none",
+            keyboard_mode="on-demand",
+            visible=False,
+            all_visible=False,
+            **kwargs,
+        )
+
+        self.chat = OllamaChat()
+
+        self.add(
+            Box(
+                name="launcher-window",
+                spacing=2,
+                orientation="v",
+                style="margin: 2px",
+                children=[
+                    Box(
+                        spacing=2,
+                        orientation="h",
+                        children=[
+                            Label(label="Ollama Chat", h_expand=True, h_align="start"),
+                            Button(
+                                image=Image(icon_name="window-close"),
+                                tooltip_text="Exit",
+                                on_clicked=lambda *_: self.set_visible(False),
+                            ),
+                        ],
+                    ),
+                    self.chat,
+                ],
+            )
+        )
+        self.add_keybinding("escape", lambda *_: self.set_visible(False))
+        self.show_all()
+
+    def toggle(self):
+        if self.get_visible():
+            self.set_visible(False)
+        else:
+            self.show_all()
+            self.set_visible(True)
+            self.chat.entry.grab_focus()

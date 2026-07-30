@@ -16,6 +16,7 @@ from dashboard import InfoDashboard
 from music_picker import MusicPicker
 from backdrop import Backdrop
 from lockscreen import LockScreen
+from ollama_chat import OllamaChatWindow
 
 class MainStatusBar(StatusBar):
     def __init__(self, launcher_window: AppLauncher, wallpaper_selector: WallpaperSelector, session_menu: SessionMenu, osd: OSD):
@@ -105,8 +106,11 @@ if __name__ == "__main__":
     dashboard = InfoDashboard(on_lock=lockscreen.lock, on_open_music_picker=music_picker.toggle)
     dashboard.set_visible(False)
 
+    ollama_chat = OllamaChatWindow()
+    ollama_chat.set_visible(False)
+
     bar = MainStatusBar(launcher_window=launcher, session_menu=session_menu, wallpaper_selector=wallpaper_selector, osd=osd)
-    app = Application("d77-shell", bar, launcher, session_menu, osd, wallpaper_selector, dashboard, backdrop, music_picker)
+    app = Application("d77-shell", bar, launcher, session_menu, osd, wallpaper_selector, dashboard, backdrop, music_picker, ollama_chat)
 
     signal.signal(signal.SIGUSR1, lambda signum, frame: bar.toggle_launcher())
     signal.signal(signal.SIGUSR2, lambda signum, frame: bar.popup_power_menu())
@@ -116,7 +120,7 @@ if __name__ == "__main__":
     # directly to amixer/brightnessctl):
     #   SIGRTMIN+1  volume +        SIGRTMIN+4  brightness +      SIGRTMIN+7  dashboard
     #   SIGRTMIN+2  volume -        SIGRTMIN+5  brightness -      SIGRTMIN+8  lock
-    #   SIGRTMIN+3  mute toggle     SIGRTMIN+6  wallpaper picker
+    #   SIGRTMIN+3  mute toggle     SIGRTMIN+6  wallpaper picker  SIGRTMIN+9  ollama chat
     # Example (Hyprland):
     #   bindel = , XF86AudioRaiseVolume, exec, kill -s SIGRTMIN+1 $(pgrep -f main.py)
     rtmin = signal.SIGRTMIN
@@ -128,6 +132,7 @@ if __name__ == "__main__":
     signal.signal(rtmin + 6, lambda s, f: bar.toggle_wallpaper_selector())
     signal.signal(rtmin + 7, lambda s, f: dashboard.toggle())
     signal.signal(rtmin + 8, lambda s, f: lockscreen.lock())
+    signal.signal(rtmin + 9, lambda s, f: ollama_chat.toggle())
 
     style_path = get_relative_path("./style.css")
     if os.path.exists(style_path):

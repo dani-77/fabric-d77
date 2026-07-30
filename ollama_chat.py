@@ -147,6 +147,7 @@ class OllamaChat(Box):
             return
         if selected and self.models_loaded:
             self.current_model = selected
+            self.saved_model = selected
             self.save_model(selected)
             self.hide_info()
 

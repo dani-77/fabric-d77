@@ -198,4 +198,31 @@ bindsym $mod+d exec fabric-d77-signal USR1
 bindsym $mod+t exec fabric-d77-signal RTMIN+8
 ```
 
+## Ollama Chat
+
+`ollama_chat.py` adds a small popup (`OllamaChatWindow`) for chatting with a
+local [Ollama](https://ollama.com) instance: a status dot, a model picker
+that can pull new models on the fly, and a simple prompt/response chat
+backed by Ollama's HTTP API.
+
+### Requirements
+
+- A running Ollama instance reachable at `http://127.0.0.1:11434` (the
+  default).
+- `requests` (already in `requirements.txt`, `python-requests` in the Arch
+  package, `python3-requests` in the Void package).
+- The status dot relies on `sv status ollama` (runit) to tell whether the
+  service is up. This works out of the box on runit-based distros (Void,
+  Artix, …); on other init systems, swap `check_ollama_status()` in
+  `ollama_chat.py` for the equivalent (e.g. `systemctl is-active ollama`).
+
+Trigger it from `SIGRTMIN+9`, consistent with the other popups:
+
+```ini
+bindl = , SUPER, O, exec, kill -s SIGRTMIN+9 $(pgrep -f main.py)
+```
+
+The chosen model is remembered across restarts at
+`~/.config/ollama-chat/model.conf`.
+
 Enjoy

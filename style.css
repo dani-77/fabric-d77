@@ -526,6 +526,19 @@ tooltip>* {
     color: var(--color4);
 }
 
+/* Ollama status indicator */
+#ollama-status.status-up {
+    color: #9ece6a;
+}
+
+#ollama-status.status-down {
+    color: #f7768e;
+}
+
+#ollama-status.status-unknown {
+    color: #565f89;
+}
+
 /* ── Lock screen (ext-session-lock-v1 via GtkSessionLock, SIGRTMIN+8) ─────── */
 .lock-screen {
     background-color: var(--background);

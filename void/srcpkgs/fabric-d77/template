@@ -5,7 +5,7 @@ version=1.0.0
 revision=1
 depends="python3 python3-gobject python3-cairo python3-cffi python3-click
  python3-loguru python3-Pillow python3-psutil python3-rapidfuzz
- python3-setproctitle python3-six python3-pam python3-thefuzz
+ python3-requests python3-setproctitle python3-six python3-pam python3-thefuzz
  python3-fabric gtk-session-lock alsa-utils brightnessctl"
 short_desc="GTK desktop shell for Wayland compositors, built on Fabric"
 maintainer="Daniel Azevedo <daniazevedo77@gmail.com>"

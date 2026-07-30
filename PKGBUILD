@@ -31,6 +31,7 @@ depends=(
   'python-six'
   'python-pam'
   'python-thefuzz'
+  'python-requests'
   'python-fabric-git'
   'gtk-session-lock'
   'alsa-utils'
@@ -39,6 +40,7 @@ depends=(
 optdepends=(
   'swaylock: lock screen fallback if gtk-session-lock is unavailable'
   'hyprlock: lock screen fallback if gtk-session-lock is unavailable'
+  'ollama: backend for the Ollama Chat popup'
 )
 backup=('etc/pam.d/fabric-d77')
 

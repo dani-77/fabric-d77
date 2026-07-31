@@ -225,4 +225,30 @@ bindl = , SUPER, O, exec, kill -s SIGRTMIN+9 $(pgrep -f main.py)
 The chosen model is remembered across restarts at
 `~/.config/ollama-chat/model.conf`.
 
+### Hardware-based model suggestion
+
+On first run (no model saved yet at `~/.config/ollama-chat/model.conf`), the
+popup probes the machine for a dedicated GPU and auto-selects the
+best-fitting *already installed* model instead of always defaulting to
+`qwen2.5:0.5b`:
+
+- `nvidia-smi` is tried first, for an exact VRAM reading.
+- If that's unavailable, it falls back to `lspci`, flagging any non-Intel
+  VGA/3D controller as a dedicated GPU (VRAM assumed conservatively, since
+  there's no universal way to query it without vendor tooling like
+  `rocm-smi`).
+- No dedicated GPU found → treated as CPU-only, suggesting the smallest
+  installed model.
+
+The detected VRAM maps to a recommended parameter-count tier (0.5b through
+72b, sized against the qwen2.5 family), and the largest installed model that
+fits the tier is picked — falling back to the smallest installed model if
+none fit. This only affects the *initial* pick: once a model is chosen
+(manually or automatically), it's saved and always wins on subsequent
+launches. The detection result is shown briefly in the popup's info line
+(e.g. `NVIDIA GPU detected (8192MB VRAM) — auto-selected 'qwen2.5:7b'.`).
+
+This is purely a suggestion among models you've already pulled — it never
+installs anything on its own.
+
 Enjoy

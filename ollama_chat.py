@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import subprocess
 import threading
 import time
@@ -20,6 +21,68 @@ CONFIG_FILE = os.path.join(CONFIG_DIR, "model.conf")
 FALLBACK_MODEL = "qwen2.5:0.5b"
 INSTALL_SENTINEL = "+ install new model..."
 
+# Used when a dedicated GPU is found but its VRAM can't be queried directly
+# (e.g. AMD card without rocm-smi installed).
+GPU_UNKNOWN_VRAM_MB = 4096
+
+# (min_vram_mb, recommended_size_b), ascending by VRAM. Sized against the
+# qwen2.5 family already used as FALLBACK_MODEL (0.5b .. 72b).
+SIZE_TIERS = [
+    (0, 0.5),
+    (2048, 1.5),
+    (4096, 3),
+    (6144, 7),
+    (10240, 14),
+    (20480, 32),
+    (40960, 72),
+]
+
+_MODEL_SIZE_RE = re.compile(r":(\d+(?:\.\d+)?)b\b", re.IGNORECASE)
+
+
+def detect_gpu():
+    """Best-effort dedicated GPU detection. Returns (vendor, vram_mb) or (None, 0)."""
+    try:
+        result = subprocess.run(
+            ["nvidia-smi", "--query-gpu=memory.total", "--format=csv,noheader,nounits"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            vram_mb = int(result.stdout.strip().splitlines()[0])
+            return "nvidia", vram_mb
+    except (FileNotFoundError, subprocess.SubprocessError, ValueError):
+        pass
+
+    try:
+        result = subprocess.run(["lspci"], capture_output=True, text=True, timeout=5)
+        for line in result.stdout.splitlines():
+            lowered = line.lower()
+            if "vga" not in lowered and "3d controller" not in lowered:
+                continue
+            if "intel" in lowered:
+                continue  # Intel iGPUs aren't dedicated
+            vendor = "amd" if "amd" in lowered or "ati" in lowered else "gpu"
+            return vendor, GPU_UNKNOWN_VRAM_MB
+    except (FileNotFoundError, subprocess.SubprocessError):
+        pass
+
+    return None, 0
+
+
+def recommend_model_size_b(vram_mb):
+    size_b = SIZE_TIERS[0][1]
+    for min_vram, tier_size_b in SIZE_TIERS:
+        if vram_mb >= min_vram:
+            size_b = tier_size_b
+    return size_b
+
+
+def parse_model_size_b(name):
+    match = _MODEL_SIZE_RE.search(name)
+    return float(match.group(1)) if match else None
+
 
 class OllamaChat(Box):
     def __init__(self, **kwargs):
@@ -29,6 +92,10 @@ class OllamaChat(Box):
         self.current_model = FALLBACK_MODEL
         self.models_loaded = False
         self.installing = False
+
+        self.gpu_vendor = None
+        self.gpu_vram_mb = 0
+        self.recommended_size_b = None
 
         self.status_dot = Label(label="●", name="ollama-status")
         self.status_dot.get_style_context().add_class("status-unknown")
@@ -64,6 +131,7 @@ class OllamaChat(Box):
         self.add(self.scroll)
         self.add(self.entry)
 
+        threading.Thread(target=self.detect_hardware, daemon=True).start()
         self.start_status_polling()
         self.refresh_model_list()
 
@@ -80,6 +148,37 @@ class OllamaChat(Box):
         os.makedirs(CONFIG_DIR, exist_ok=True)
         with open(CONFIG_FILE, "w") as f:
             f.write(model)
+
+    # ---------- Hardware detection ----------
+
+    def detect_hardware(self):
+        vendor, vram_mb = detect_gpu()
+        size_b = recommend_model_size_b(vram_mb)
+        GLib.idle_add(self.set_hardware_info, vendor, vram_mb, size_b)
+
+    def set_hardware_info(self, vendor, vram_mb, size_b):
+        self.gpu_vendor = vendor
+        self.gpu_vram_mb = vram_mb
+        self.recommended_size_b = size_b
+        return False
+
+    def hardware_description(self):
+        if self.gpu_vendor == "nvidia":
+            return f"NVIDIA GPU detected ({self.gpu_vram_mb}MB VRAM)"
+        if self.gpu_vendor:
+            return "Dedicated GPU detected"
+        return "No dedicated GPU detected (CPU-only)"
+
+    def pick_model_for_hardware(self, models):
+        sized = [(parse_model_size_b(m), m) for m in models]
+        sized = [(size, m) for size, m in sized if size is not None]
+        if not sized:
+            return FALLBACK_MODEL if FALLBACK_MODEL in models else models[0]
+
+        fitting = [(size, m) for size, m in sized if size <= self.recommended_size_b]
+        if fitting:
+            return max(fitting, key=lambda item: item[0])[1]
+        return min(sized, key=lambda item: item[0])[1]
 
     # ---------- Info label (only shown when relevant) ----------
 
@@ -119,8 +218,12 @@ class OllamaChat(Box):
         if not models:
             models = [FALLBACK_MODEL]
 
+        hardware_suggested = False
         if self.saved_model in models:
             chosen = self.saved_model
+        elif self.recommended_size_b is not None:
+            chosen = self.pick_model_for_hardware(models)
+            hardware_suggested = True
         elif FALLBACK_MODEL in models:
             chosen = FALLBACK_MODEL
         else:
@@ -128,6 +231,10 @@ class OllamaChat(Box):
 
         self.current_model = chosen
         self.save_model(chosen)
+
+        if hardware_suggested:
+            self.show_info(f"{self.hardware_description()} — auto-selected '{chosen}'.")
+            GLib.timeout_add_seconds(8, lambda: self.hide_info() or False)
 
         active_index = 0
         for i, name in enumerate(models):

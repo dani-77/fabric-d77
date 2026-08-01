@@ -19,10 +19,11 @@ from lockscreen import LockScreen
 from ollama_chat import OllamaChatWindow
 
 class MainStatusBar(StatusBar):
-    def __init__(self, launcher_window: AppLauncher, wallpaper_selector: WallpaperSelector, session_menu: SessionMenu, osd: OSD):
+    def __init__(self, launcher_window: AppLauncher, wallpaper_selector: WallpaperSelector, session_menu: SessionMenu, osd: OSD, ollama_chat: OllamaChatWindow):
         self.launcher = launcher_window
         self.wallpaper_selector = wallpaper_selector
         self.session_menu = session_menu
+        self.ollama_chat = ollama_chat
         super().__init__(osd=osd)
 
     def show_all(self):
@@ -38,9 +39,16 @@ class MainStatusBar(StatusBar):
             on_clicked=lambda *_: self.toggle_wallpaper_selector(),
         )
 
+        ollama_chat_button = Button(
+            name="ollama-chat-button",
+            child=Image(icon_name="chat-message-new-symbolic", icon_size=14),
+            on_clicked=lambda *_: self.ollama_chat.toggle(),
+        )
+
         current_left = list(self.left_container.children)
         current_left.insert(0, launcher_button)
         current_left.insert(1, wallpaper_button)
+        current_left.insert(2, ollama_chat_button)
         self.left_container.children = current_left
 
         self.power_button = Button(
@@ -109,7 +117,7 @@ if __name__ == "__main__":
     ollama_chat = OllamaChatWindow()
     ollama_chat.set_visible(False)
 
-    bar = MainStatusBar(launcher_window=launcher, session_menu=session_menu, wallpaper_selector=wallpaper_selector, osd=osd)
+    bar = MainStatusBar(launcher_window=launcher, session_menu=session_menu, wallpaper_selector=wallpaper_selector, osd=osd, ollama_chat=ollama_chat)
     app = Application("d77-shell", bar, launcher, session_menu, osd, wallpaper_selector, dashboard, backdrop, music_picker, ollama_chat)
 
     signal.signal(signal.SIGUSR1, lambda signum, frame: bar.toggle_launcher())

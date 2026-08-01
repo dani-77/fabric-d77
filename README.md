@@ -211,10 +211,11 @@ backed by Ollama's HTTP API.
   default).
 - `requests` (already in `requirements.txt`, `python-requests` in the Arch
   package, `python3-requests` in the Void package).
-- The status dot relies on `sv status ollama` (runit) to tell whether the
-  service is up. This works out of the box on runit-based distros (Void,
-  Artix, …); on other init systems, swap `check_ollama_status()` in
-  `ollama_chat.py` for the equivalent (e.g. `systemctl is-active ollama`).
+- The status dot polls `GET /api/version` on the Ollama HTTP API directly, so
+  it works the same regardless of init system and needs no special
+  permissions (querying the runit/systemd service directly required root or
+  group access to the supervise dir, which regular users don't have by
+  default).
 
 Trigger it from `SIGRTMIN+9`, consistent with the other popups:
 

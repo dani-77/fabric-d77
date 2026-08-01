@@ -121,8 +121,13 @@ class OllamaChat(Box):
         header.add(Label(label="Ollama"))
         header.add(self.model_combo)
 
-        self.output = Label(label="", line_wrap=True, h_align="start")
-        self.scroll = ScrolledWindow(child=self.output, v_expand=True)
+        self.output = Label(label="", line_wrap="word", h_align="start")
+        self.scroll = ScrolledWindow(
+            child=self.output,
+            min_content_size=(360, 320),
+            max_content_size=(360, 320),
+            v_expand=True,
+        )
         self.entry = Entry(placeholder="Ask the AI...", on_activate=self.on_submit)
 
         self.add(header)
@@ -328,11 +333,9 @@ class OllamaChat(Box):
 
     def check_ollama_status(self):
         try:
-            result = subprocess.run(
-                ["sv", "status", "ollama"], capture_output=True, text=True, timeout=3
-            )
-            return result.stdout.strip().startswith("run:")
-        except Exception:
+            requests.get(f"{OLLAMA_BASE}/api/version", timeout=2)
+            return True
+        except requests.exceptions.RequestException:
             return False
 
     def update_status_dot(self, is_up):
@@ -374,7 +377,7 @@ class OllamaChat(Box):
                 self.append_text(chunk.get("response", ""))
 
         except requests.exceptions.ConnectionError:
-            self.append_text("\n[Ollama isn't running. Check with: sv status ollama]\n")
+            self.append_text(f"\n[Ollama isn't running or unreachable at {OLLAMA_BASE}.]\n")
         except requests.exceptions.Timeout:
             self.append_text("\n[Ollama took too long to respond — timeout]\n")
         except requests.exceptions.HTTPError as e:

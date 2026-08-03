@@ -122,6 +122,7 @@ class OllamaChat(Box):
         header.add(self.model_combo)
 
         self.output = Label(label="", line_wrap="word", h_align="start")
+        self.output.set_selectable(True)
         self.scroll = ScrolledWindow(
             child=self.output,
             min_content_size=(360, 320),

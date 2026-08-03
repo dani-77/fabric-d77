@@ -92,6 +92,9 @@ class OllamaChat(Box):
         self.current_model = FALLBACK_MODEL
         self.models_loaded = False
         self.installing = False
+        self.install_cancelled = False
+        self.first_run_checked = False
+        self._install_response = None
 
         self.gpu_vendor = None
         self.gpu_vram_mb = 0
@@ -107,9 +110,17 @@ class OllamaChat(Box):
         self.model_combo.connect("changed", self.on_model_changed)
 
         # Text only shows up here when something is happening (pull in progress, error, etc.)
-        self.info_label = Label(label="", h_align="start")
+        self.info_label = Label(label="", h_align="start", h_expand=True)
         self.info_label.set_no_show_all(True)
         self.info_label.hide()
+
+        self.cancel_button = Button(label="Cancel", on_clicked=self.on_cancel_install)
+        self.cancel_button.set_no_show_all(True)
+        self.cancel_button.hide()
+
+        self.info_row = Box(orientation="h", spacing=6)
+        self.info_row.add(self.info_label)
+        self.info_row.add(self.cancel_button)
 
         self.install_entry = Entry(placeholder="model-name:tag (e.g. llama3.2:3b)")
         self.install_entry.set_no_show_all(True)
@@ -132,7 +143,7 @@ class OllamaChat(Box):
         self.entry = Entry(placeholder="Ask the AI...", on_activate=self.on_submit)
 
         self.add(header)
-        self.add(self.info_label)
+        self.add(self.info_row)
         self.add(self.install_entry)
         self.add(self.scroll)
         self.add(self.entry)
@@ -186,6 +197,29 @@ class OllamaChat(Box):
             return max(fitting, key=lambda item: item[0])[1]
         return min(sized, key=lambda item: item[0])[1]
 
+    # ---------- First-run auto install ----------
+
+    def try_first_run_install(self):
+        """Ollama is up but has zero models and nothing was ever chosen before.
+        If there's internet, auto-pull FALLBACK_MODEL so chat works out of the box."""
+        try:
+            requests.head("https://ollama.com", timeout=4)
+        except requests.exceptions.RequestException:
+            return
+        GLib.idle_add(self.start_first_run_install)
+
+    def start_first_run_install(self):
+        if self.installing or self.saved_model is not None:
+            return False
+        self.installing = True
+        self.show_cancel_button()
+        self.show_info(
+            f"No models installed — downloading '{FALLBACK_MODEL}' automatically "
+            f"so chat works out of the box. Click Cancel to stop."
+        )
+        threading.Thread(target=self.pull_model, args=(FALLBACK_MODEL,), daemon=True).start()
+        return False
+
     # ---------- Info label (only shown when relevant) ----------
 
     def show_info(self, text):
@@ -195,6 +229,13 @@ class OllamaChat(Box):
 
     def hide_info(self):
         self.info_label.hide()
+
+    def show_cancel_button(self):
+        self.cancel_button.set_no_show_all(False)
+        self.cancel_button.show()
+
+    def hide_cancel_button(self):
+        self.cancel_button.hide()
 
     # ---------- Model list ----------
 
@@ -219,6 +260,12 @@ class OllamaChat(Box):
             return False
 
         self.models_loaded = True
+        models_available = bool(models)
+
+        if not models_available and self.saved_model is None and not self.first_run_checked:
+            self.first_run_checked = True
+            threading.Thread(target=self.try_first_run_install, daemon=True).start()
+
         self.model_combo.remove_all()
 
         if not models:
@@ -236,7 +283,8 @@ class OllamaChat(Box):
             chosen = models[0]
 
         self.current_model = chosen
-        self.save_model(chosen)
+        if models_available:
+            self.save_model(chosen)
 
         if hardware_suggested:
             self.show_info(f"{self.hardware_description()} — auto-selected '{chosen}'.")
@@ -270,12 +318,24 @@ class OllamaChat(Box):
         model_name = entry.get_text().strip()
         entry.set_text("")
         self.install_entry.hide()
-        if not model_name:
+        if not model_name or self.installing:
             return
         self.installing = True
+        self.show_cancel_button()
         threading.Thread(target=self.pull_model, args=(model_name,), daemon=True).start()
 
+    def on_cancel_install(self, button):
+        self.install_cancelled = True
+        if self._install_response is not None:
+            try:
+                self._install_response.close()
+            except Exception:
+                pass
+        self.hide_cancel_button()
+
     def pull_model(self, model_name):
+        self.install_cancelled = False
+        self._install_response = None
         try:
             resp = requests.post(
                 f"{OLLAMA_BASE}/api/pull",
@@ -283,8 +343,11 @@ class OllamaChat(Box):
                 stream=True,
                 timeout=None,
             )
+            self._install_response = resp
             resp.raise_for_status()
             for line in resp.iter_lines():
+                if self.install_cancelled:
+                    break
                 if not line:
                     continue
                 chunk = json.loads(line)
@@ -302,18 +365,32 @@ class OllamaChat(Box):
                 else:
                     GLib.idle_add(self.show_info, f"Installing '{model_name}': {status}")
 
+            if self.install_cancelled:
+                GLib.idle_add(self.show_info, f"Installation of '{model_name}' cancelled.")
+                GLib.idle_add(self.finish_install, None)
+                return
+
             GLib.idle_add(self.show_info, f"'{model_name}' installed successfully.")
             GLib.idle_add(self.finish_install, model_name)
 
         except requests.exceptions.ConnectionError:
-            GLib.idle_add(self.show_info, "Ollama isn't running — couldn't install.")
+            if self.install_cancelled:
+                GLib.idle_add(self.show_info, f"Installation of '{model_name}' cancelled.")
+            else:
+                GLib.idle_add(self.show_info, "Ollama isn't running — couldn't install.")
             GLib.idle_add(self.finish_install, None)
         except Exception as e:
-            GLib.idle_add(self.show_info, f"Unexpected error installing '{model_name}': {e}")
+            if self.install_cancelled:
+                GLib.idle_add(self.show_info, f"Installation of '{model_name}' cancelled.")
+            else:
+                GLib.idle_add(self.show_info, f"Unexpected error installing '{model_name}': {e}")
             GLib.idle_add(self.finish_install, None)
+        finally:
+            self._install_response = None
 
     def finish_install(self, new_model):
         self.installing = False
+        self.hide_cancel_button()
         if new_model:
             self.saved_model = new_model
         self.refresh_model_list()

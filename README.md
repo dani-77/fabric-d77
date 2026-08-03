@@ -252,4 +252,18 @@ launches. The detection result is shown briefly in the popup's info line
 This is purely a suggestion among models you've already pulled — it never
 installs anything on its own.
 
+### First-run auto install
+
+If Ollama is reachable but reports **zero installed models** and there's no
+saved preference yet (a genuine first run, not just an empty registry blip),
+the popup checks for internet (a quick `HEAD` request to ollama.com) and, if
+reachable, automatically pulls `qwen2.5:0.5b` so the chat works without any
+manual setup. This is called out clearly in the popup's info line, with a
+**Cancel** button next to it — clicking it aborts the download immediately
+(the in-progress connection is closed) instead of waiting for it to finish
+or fail on its own. Cancelling, or having no internet, just leaves the model list empty; the
+attempt only happens once per shell run (it won't retry on every popup
+open), so pull a model manually via the picker's "install new model..."
+entry, or restart the shell to trigger the check again.
+
 Enjoy

@@ -15,9 +15,9 @@ homepage="https://github.com/dani-77/fabric-d77"
 # Pinned snapshot of the repo (no upstream release tags yet). Bump _commit
 # and recompute checksum (`./xbps-src pkg fabric-d77` prints the real one on
 # a mismatch) whenever you want to package a newer revision.
-_commit=aaab4ba83366c581efc92dbb63b285e733b15587
+_commit=bcdd6bc03264f107a4bcd19173c0344ec54e2006
 distfiles="https://github.com/dani-77/fabric-d77/archive/${_commit}.tar.gz"
-checksum=f7f6ed9ae5caf358776e8f7645045c308efce6dd9b16d53b366a3a0a2c4f1e1b
+checksum=b74dcc008ff7b7fad2ac9528902a1e9b762a715e32d9db98a1b13acac1f99158
 wrksrc="fabric-d77-${_commit}"
 
 do_install() {

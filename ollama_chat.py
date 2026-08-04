@@ -564,6 +564,16 @@ class OllamaChatWindow(Window):
         if self.get_visible():
             self.set_visible(False)
         else:
-            self.show_all()
-            self.set_visible(True)
-            self.chat.entry.grab_focus()
+            # Deferred via idle_add: opening this overlay-layer window and
+            # grabbing keyboard focus on self.chat.entry synchronously inside
+            # the triggering GTK event (e.g. the bar button's click handler)
+            # made the compositor silently refuse to map the surface —
+            # click did nothing, while SIGRTMIN+9 (which runs outside any
+            # GTK event context) worked fine. Running it on a fresh main
+            # loop iteration instead makes both paths behave the same.
+            def _open():
+                self.show_all()
+                self.set_visible(True)
+                self.chat.entry.grab_focus()
+                return False
+            GLib.idle_add(_open)

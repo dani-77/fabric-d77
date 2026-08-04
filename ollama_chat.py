@@ -95,6 +95,9 @@ class OllamaChat(Box):
         self.install_cancelled = False
         self.first_run_checked = False
         self._install_response = None
+        self.generating = False
+        self.generation_cancelled = False
+        self._chat_response = None
 
         self.gpu_vendor = None
         self.gpu_vram_mb = 0
@@ -140,13 +143,20 @@ class OllamaChat(Box):
             max_content_size=(360, 320),
             v_expand=True,
         )
-        self.entry = Entry(placeholder="Ask the AI...", on_activate=self.on_submit)
+        self.entry = Entry(placeholder="Ask the AI...", on_activate=self.on_submit, h_expand=True)
+        self.stop_button = Button(label="Stop", on_clicked=self.on_stop_generation)
+        self.stop_button.set_no_show_all(True)
+        self.stop_button.hide()
+
+        self.prompt_row = Box(orientation="h", spacing=6)
+        self.prompt_row.add(self.entry)
+        self.prompt_row.add(self.stop_button)
 
         self.add(header)
         self.add(self.info_row)
         self.add(self.install_entry)
         self.add(self.scroll)
-        self.add(self.entry)
+        self.add(self.prompt_row)
 
         threading.Thread(target=self.detect_hardware, daemon=True).start()
         self.start_status_polling()
@@ -236,6 +246,22 @@ class OllamaChat(Box):
 
     def hide_cancel_button(self):
         self.cancel_button.hide()
+
+    def show_stop_button(self):
+        self.stop_button.set_no_show_all(False)
+        self.stop_button.show()
+
+    def hide_stop_button(self):
+        self.stop_button.hide()
+
+    def on_stop_generation(self, button):
+        self.generation_cancelled = True
+        if self._chat_response is not None:
+            try:
+                self._chat_response.close()
+            except Exception:
+                pass
+        self.hide_stop_button()
 
     # ---------- Model list ----------
 
@@ -430,22 +456,33 @@ class OllamaChat(Box):
 
     def on_submit(self, entry):
         prompt = entry.get_text().strip()
-        if not prompt:
+        if not prompt or self.generating:
             return
         entry.set_text("")
         self.append_text(f"\n> {prompt}\n")
+        self.generating = True
+        self.generation_cancelled = False
+        self.show_stop_button()
         threading.Thread(target=self.query_ollama, args=(prompt,), daemon=True).start()
 
     def query_ollama(self, prompt):
+        self._chat_response = None
         try:
             resp = requests.post(
                 f"{OLLAMA_BASE}/api/generate",
-                json={"model": self.current_model, "prompt": prompt, "stream": True},
+                # keep_alive=0 unloads the model right after this reply
+                # instead of idling on Ollama's server-side 5min default —
+                # keeps it strictly load-on-demand.
+                json={"model": self.current_model, "prompt": prompt, "stream": True, "keep_alive": 0},
                 stream=True,
                 timeout=60,
             )
+            self._chat_response = resp
             resp.raise_for_status()
             for line in resp.iter_lines():
+                if self.generation_cancelled:
+                    self.append_text("\n[stopped]\n")
+                    return
                 if not line:
                     continue
                 chunk = json.loads(line)
@@ -455,7 +492,10 @@ class OllamaChat(Box):
                 self.append_text(chunk.get("response", ""))
 
         except requests.exceptions.ConnectionError:
-            self.append_text(f"\n[Ollama isn't running or unreachable at {OLLAMA_BASE}.]\n")
+            if self.generation_cancelled:
+                self.append_text("\n[stopped]\n")
+            else:
+                self.append_text(f"\n[Ollama isn't running or unreachable at {OLLAMA_BASE}.]\n")
         except requests.exceptions.Timeout:
             self.append_text("\n[Ollama took too long to respond — timeout]\n")
         except requests.exceptions.HTTPError as e:
@@ -464,7 +504,14 @@ class OllamaChat(Box):
             else:
                 self.append_text(f"\n[HTTP error: {e}]\n")
         except Exception as e:
-            self.append_text(f"\n[unexpected error: {e}]\n")
+            if self.generation_cancelled:
+                self.append_text("\n[stopped]\n")
+            else:
+                self.append_text(f"\n[unexpected error: {e}]\n")
+        finally:
+            self._chat_response = None
+            self.generating = False
+            GLib.idle_add(self.hide_stop_button)
 
     def append_text(self, text):
         current = self.output.get_label() or ""

@@ -47,7 +47,11 @@ from fabric.core.fabricator import Fabricator  # noqa: E402
 MIXER_CONTROL = "Master"   # ALSA control used by amixer
 STEP = 5                   # step (%) for volume and brightness up/down
 TIMEOUT_MS = 2500          # time (ms) the OSD stays visible
-POLL_INTERVAL_MS = 300     # polling interval to detect external changes
+POLL_INTERVAL_MS = 2000    # polling interval to detect external changes (was
+                           # 300ms — 3 subprocess forks/cycle, ~10/sec forever
+                           # in the background regardless of OSD visibility;
+                           # nothing about "someone else changed it" detection
+                           # needs sub-second latency)
 
 
 # ── Backend helpers ──────────────────────────────────────────────────────────

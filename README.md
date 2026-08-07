@@ -1,12 +1,16 @@
-# fabric-d77
+<p align="center">
+  <img src="doc/assets/fabric-d77-icon.png" width="128" alt="fabric-d77 icon">
+</p>
 
-A simple, good-looking desktop shell (top bar, launcher, lock screen, OSD,
-Ollama chat, wallpaper picker) for Wayland compositors like Hyprland and
-sway — built with [Fabric](https://github.com/Fabric-Development/fabric) and
-Python.
+<h1 align="center">fabric-d77</h1>
 
-<img src="doc/assets/fabric-d77-logo.png" alt="fabric-d77 logo" width="160">
+<p align="center">
+  A simple, good-looking desktop shell — top bar, app launcher, lock screen,
+  volume/brightness OSD, wallpaper picker and a local AI chat popup — for
+  Wayland compositors like Hyprland and sway.
+</p>
 
+---
 
 > 👉 Looking for the full technical/developer documentation (architecture,
 > packaging internals, PAM/session-lock details, etc.)? See
@@ -25,6 +29,9 @@ compositor doesn't give you out of the box:
 - A **wallpaper picker**.
 - A small **Ollama chat** popup for talking to a local AI model.
 - A **power/session menu** and **dashboard**.
+
+It's built on **[Fabric](https://github.com/Fabric-Development/fabric)**
+and Python.
 
 ## Installing
 
@@ -74,36 +81,42 @@ elsewhere) to close them.
 ## Keybinds
 
 fabric-d77 doesn't grab keys itself — you bind these in your compositor
-config (Hyprland/sway shown below), and it reacts to the signal.
+config (Hyprland/sway shown below), and it reacts to the signal. The
+easiest way is the bundled **`fabric-d77-signal`** helper script — it ships
+automatically with the Arch/Void packages, and just needs `SIGNAL` as its
+one argument:
 
-| Action              | Suggested bind           | Command                                                   |
-|---------------------|---------------------------|------------------------------------------------------------|
-| App launcher        | click the bar / `SUPER`  | `kill -s SIGUSR1 $(pgrep -f main.py)`                      |
-| Power/session menu  | —                         | `kill -s SIGUSR2 $(pgrep -f main.py)`                      |
-| Volume up           | `XF86AudioRaiseVolume`   | `amixer set Master 5%+ unmute` *(or RTMIN+1, see below)*  |
-| Volume down         | `XF86AudioLowerVolume`   | `amixer set Master 5%-` *(or RTMIN+2)*                     |
-| Mute toggle         | `XF86AudioMute`          | `amixer set Master toggle` *(or RTMIN+3)*                  |
-| Brightness up       | `XF86MonBrightnessUp`    | `brightnessctl set 5%+` *(or RTMIN+4)*                     |
-| Brightness down     | `XF86MonBrightnessDown`  | `brightnessctl set 5%-` *(or RTMIN+5)*                     |
-| Wallpaper picker    | `SUPER + W`              | `kill -s SIGRTMIN+6 $(pgrep -f main.py)`                   |
-| Dashboard           | `SUPER + D`              | `kill -s SIGRTMIN+7 $(pgrep -f main.py)`                   |
-| Lock screen         | `SUPER + L`              | `kill -s SIGRTMIN+8 $(pgrep -f main.py)`                   |
-| Ollama chat         | `SUPER + O`               | `kill -s SIGRTMIN+9 $(pgrep -f main.py)`                   |
+| Action              | Suggested bind           | Command                                |
+|---------------------|---------------------------|------------------------------------------|
+| App launcher        | click the bar / `SUPER`  | `fabric-d77-signal USR1`                 |
+| Power/session menu  | —                         | `fabric-d77-signal USR2`                 |
+| Volume up           | `XF86AudioRaiseVolume`   | `amixer set Master 5%+ unmute` *(or `fabric-d77-signal RTMIN+1`)* |
+| Volume down         | `XF86AudioLowerVolume`   | `amixer set Master 5%-` *(or `RTMIN+2`)* |
+| Mute toggle         | `XF86AudioMute`          | `amixer set Master toggle` *(or `RTMIN+3`)* |
+| Brightness up       | `XF86MonBrightnessUp`    | `brightnessctl set 5%+` *(or `RTMIN+4`)* |
+| Brightness down     | `XF86MonBrightnessDown`  | `brightnessctl set 5%-` *(or `RTMIN+5`)* |
+| Wallpaper picker    | `SUPER + W`              | `fabric-d77-signal RTMIN+6`              |
+| Dashboard           | `SUPER + D`              | `fabric-d77-signal RTMIN+7`              |
+| Lock screen         | `SUPER + L`              | `fabric-d77-signal RTMIN+8`              |
+| Ollama chat         | `SUPER + O`               | `fabric-d77-signal RTMIN+9`              |
 
 Example Hyprland/sway snippet:
 
 ```ini
-bindl  = , SUPER, exec, kill -s SIGUSR1 $(pgrep -f main.py)
-bindl  = , SUPER, W, exec, kill -s SIGRTMIN+6 $(pgrep -f main.py)
-bindl  = , SUPER, D, exec, kill -s SIGRTMIN+7 $(pgrep -f main.py)
-bindl  = , SUPER, L, exec, kill -s SIGRTMIN+8 $(pgrep -f main.py)
-bindl  = , SUPER, O, exec, kill -s SIGRTMIN+9 $(pgrep -f main.py)
+bindl  = , SUPER, exec, fabric-d77-signal USR1
+bindl  = , SUPER, W, exec, fabric-d77-signal RTMIN+6
+bindl  = , SUPER, D, exec, fabric-d77-signal RTMIN+7
+bindl  = , SUPER, L, exec, fabric-d77-signal RTMIN+8
+bindl  = , SUPER, O, exec, fabric-d77-signal RTMIN+9
 ```
 
-> If you also use an idle daemon (swayidle, hypridle...) to auto-lock the
-> screen, read the note on the safer `fabric-d77-signal` helper in
+> **No `fabric-d77-signal` on your system?** (only happens with a manual
+> venv install — run `sudo make install` to add it, or fall back to
+> `kill -s SIGRTMIN+8 $(pgrep -f main.py)`-style raw signals.) Either way,
+> if you also use an idle daemon (swayidle, hypridle...) to auto-lock the
+> screen, read the note on why the helper matters there in
 > [`doc/README.md`](doc/README.md#idle-daemons-swayidle-hypridle-) — sending
-> the raw `pgrep`/`kill` command straight from an idle daemon has a known
+> a raw `pgrep`/`kill` command straight from an idle daemon has a known
 > footgun.
 
 ## More
@@ -112,4 +125,6 @@ For requirements, troubleshooting, and how each feature (lock screen, OSD,
 Ollama chat, packaging) works under the hood, see the
 [technical documentation in `doc/README.md`](doc/README.md).
 
-Enjoy 🎉
+## License
+
+MIT — see [LICENSE](LICENSE).

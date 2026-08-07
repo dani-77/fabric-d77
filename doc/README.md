@@ -102,22 +102,28 @@ bindel = , XF86MonBrightnessDown, exec, brightnessctl set 5%-
 ```
 
 Alternatively, let the shell apply the change (and show the OSD instantly) via
-real-time signals sent to the running shell:
+real-time signals sent to the running shell, through the bundled
+`fabric-d77-signal` helper (see [Idle daemons](#idle-daemons-swayidle-hypridle-)
+below for what it does and how to get it):
+
+```ini
+bindel = , XF86AudioRaiseVolume,  exec, fabric-d77-signal RTMIN+1
+bindel = , XF86AudioLowerVolume,  exec, fabric-d77-signal RTMIN+2
+bindl  = , XF86AudioMute,         exec, fabric-d77-signal RTMIN+3
+bindel = , XF86MonBrightnessUp,   exec, fabric-d77-signal RTMIN+4
+bindel = , XF86MonBrightnessDown, exec, fabric-d77-signal RTMIN+5
+```
+
+`fabric-d77-signal` isn't required — the raw form also works —
+but it's what keeps this safe to also drive from an idle daemon (see
+[Idle daemons](#idle-daemons-swayidle-hypridle-) below):
 
 ```ini
 bindel = , XF86AudioRaiseVolume,  exec, kill -s SIGRTMIN+1 $(pgrep -f main.py)
-bindel = , XF86AudioLowerVolume,  exec, kill -s SIGRTMIN+2 $(pgrep -f main.py)
-bindl  = , XF86AudioMute,         exec, kill -s SIGRTMIN+3 $(pgrep -f main.py)
-bindel = , XF86MonBrightnessUp,   exec, kill -s SIGRTMIN+4 $(pgrep -f main.py)
-bindel = , XF86MonBrightnessDown, exec, kill -s SIGRTMIN+5 $(pgrep -f main.py)
 ```
 
 You can tweak the step, timeout, mixer control and poll interval at the top of
 `osd.py` (`STEP`, `TIMEOUT_MS`, `MIXER_CONTROL`, `POLL_INTERVAL_MS`).
-
-> If any of these signals are sent from inside an idle daemon (e.g.
-> `swayidle`), read [Idle daemons](#idle-daemons-swayidle-hypridle-) below
-> first — driving signals off a raw `pgrep -f main.py` pattern can misfire.
 
 ## Lock screen
 
@@ -136,8 +142,12 @@ Unlocking is done via **PAM**, so it checks your normal system password.
 Trigger it from the session menu's "Lock" entry, or bind a key directly:
 
 ```ini
-bindl = , SUPER, L, exec, kill -s SIGRTMIN+8 $(pgrep -f main.py)
+bindl = , SUPER, L, exec, fabric-d77-signal RTMIN+8
 ```
+
+(or the raw form, `kill -s SIGRTMIN+8 $(pgrep -f main.py)`, if you haven't
+got the helper installed — see [Idle daemons](#idle-daemons-swayidle-hypridle-)
+below for what it is).
 
 If you also auto-lock from an idle daemon (`swayidle`, `hypridle`, …), see
 [Idle daemons](#idle-daemons-swayidle-hypridle-) below — sending the lock
@@ -223,8 +233,11 @@ backed by Ollama's HTTP API.
 Trigger it from `SIGRTMIN+9`, consistent with the other popups:
 
 ```ini
-bindl = , SUPER, O, exec, kill -s SIGRTMIN+9 $(pgrep -f main.py)
+bindl = , SUPER, O, exec, fabric-d77-signal RTMIN+9
 ```
+
+(or `kill -s SIGRTMIN+9 $(pgrep -f main.py)` without the helper — see
+[Idle daemons](#idle-daemons-swayidle-hypridle-) below).
 
 The chosen model is remembered across restarts at
 `~/.config/ollama-chat/model.conf`.

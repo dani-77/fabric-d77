@@ -1,5 +1,6 @@
 import os
 import psutil
+import re
 import subprocess
 from datetime import datetime
 
@@ -40,6 +41,7 @@ from fabric.widgets.wayland import WaylandWindow as Window
 from fabric.utils import get_relative_path
 
 from dashboard import _launch_nmtui
+from osd import get_power_profile
 
 
 def _detect_compositor() -> str:
@@ -172,46 +174,103 @@ def get_wifi_details():
     return "network-wireless-offline-symbolic", "Disconnected"
 
 
-def get_battery_info():
+_UPOWER = "org.freedesktop.UPower"
+_UPOWER_DISPLAY_DEVICE = "/org/freedesktop/UPower/devices/DisplayDevice"
+_UPOWER_DEVICE_IF = "org.freedesktop.UPower.Device"
+
+# org.freedesktop.UPower.Device's `State` enum.
+_STATE_CHARGING, _STATE_DISCHARGING, _STATE_FULLY_CHARGED = 1, 2, 4
+
+
+def _gdbus_get(dest, path, iface, prop):
+    """Reads one D-Bus property via `gdbus`, returns its raw variant text
+    (e.g. "(<uint32 2>,)", "(<true>,)") or "" on failure."""
     try:
-        ps_root = "/sys/class/power_supply"
-        bat_dir = next(
-            (
-                os.path.join(ps_root, e)
-                for e in os.listdir(ps_root)
-                if os.path.isfile(os.path.join(ps_root, e, "capacity"))
-                and open(os.path.join(ps_root, e, "type")).read().strip() == "Battery"
-            ),
-            None,
+        return subprocess.check_output(
+            ["gdbus", "call", "--system", "--dest", dest, "--object-path", path,
+             "--method", "org.freedesktop.DBus.Properties.Get", iface, prop],
+            text=True, stderr=subprocess.DEVNULL, timeout=2,
         )
-        if bat_dir:
-            with open(f"{bat_dir}/capacity", "r") as f:
-                percent = int(f.read().strip())
-            with open(f"{bat_dir}/status", "r") as f:
-                status = f.read().strip().lower()
-            charging = status == "charging"
+    except Exception:
+        return ""
 
-            time_str = ""
-            time_file = f"{bat_dir}/time_to_full_now" if charging else f"{bat_dir}/time_to_empty_now"
-            if os.path.exists(time_file):
-                with open(time_file, "r") as f:
-                    seconds = int(f.read().strip())
-                if 0 < seconds < 1000000:
-                    hours = seconds // 3600
-                    minutes = (seconds % 3600) // 60
-                    # Format time as (1h 45m)
-                    time_str = f" ({hours}h {minutes}m)"
 
-            if charging:
-                icon = "battery-caution-charging-symbolic"
-            else:
-                if percent > 25: icon = "battery-good-symbolic"
-                else: icon = "battery-caution-symbolic"
+def _format_duration(seconds):
+    """'Xh Ymin' (or just 'Ymin' under an hour) from a duration in seconds."""
+    total_min = round(seconds / 60)
+    h, m = divmod(total_min, 60)
+    return f"{h}h {m}min" if h > 0 else f"{m}min"
 
-            return icon, f"{percent}%{time_str}"
+
+def _profile_label(profile):
+    """Mirrors Osd.qml's power-profile label mapping (quickshell-d77/utumno)."""
+    return {
+        "performance": "Performance",
+        "power-saver": "Power saver",
+        "balanced": "Balanced",
+    }.get(profile, "Unknown")
+
+
+def get_battery_info():
+    """Reads UPower's DisplayDevice — aggregated across every battery, and
+    the only way to tell "no battery" apart from "haven't polled yet" —
+    instead of the first /sys/class/power_supply/*/type == Battery entry.
+    Same fix applied to quickshell-d77's batProc and utumno/helium-d77's
+    UPower-backed readers; also picks up TimeToEmpty/TimeToFull from
+    UPower directly rather than the optional (not every driver exposes
+    them) sysfs time_to_*_now attributes this used to read.
+
+    Returns (icon_name, percent_text, tooltip_text, present).
+    """
+    def prop(name):
+        return _gdbus_get(_UPOWER, _UPOWER_DISPLAY_DEVICE, _UPOWER_DEVICE_IF, name)
+
+    try:
+        kind = re.search(r"uint32 (\d+)", prop("Type"))
+        present = "true" in prop("IsPresent")
+        if not kind or kind.group(1) != "2" or not present:
+            return "battery-missing-symbolic", "N/A", "", False
+
+        pct_match = re.search(r"([\d.]+)", prop("Percentage"))
+        percent = round(float(pct_match.group(1))) if pct_match else 0
+
+        state_match = re.search(r"uint32 (\d+)", prop("State"))
+        state = int(state_match.group(1)) if state_match else 0
+
+        def secs(raw):
+            m = re.search(r"int64 (\d+)", raw)
+            return int(m.group(1)) if m else 0
+
+        time_to_empty = secs(prop("TimeToEmpty"))
+        time_to_full = secs(prop("TimeToFull"))
+
+        if state == _STATE_CHARGING:
+            icon = "battery-caution-charging-symbolic"
+        elif percent > 25:
+            icon = "battery-good-symbolic"
+        else:
+            icon = "battery-caution-symbolic"
+
+        if state == _STATE_CHARGING and time_to_full > 0:
+            time_line = f"Charging — {_format_duration(time_to_full)} until full"
+        elif state == _STATE_CHARGING:
+            time_line = "Charging"
+        elif state == _STATE_DISCHARGING and time_to_empty > 0:
+            time_line = f"{_format_duration(time_to_empty)} remaining"
+        elif state == _STATE_DISCHARGING:
+            time_line = "On battery"
+        elif state == _STATE_FULLY_CHARGED:
+            time_line = "Fully charged"
+        else:
+            time_line = "Battery state unknown"
+
+        profile = _profile_label(get_power_profile())
+        tooltip = f"{time_line}\nPower profile: {profile}"
+
+        return icon, f"{percent}%", tooltip, True
     except Exception:
         pass
-    return "battery-missing-symbolic", "N/A"
+    return "battery-missing-symbolic", "N/A", "", False
 
 
 class StatusBar(Window):
@@ -278,9 +337,15 @@ class StatusBar(Window):
         )
 
         def update_battery(_, info):
-            icon_name, percent_text = info
+            icon_name, percent_text, tooltip_text, present = info
+            # Hidden on a battery-less desktop instead of showing the old
+            # "N/A" placeholder forever — see get_battery_info().
+            battery_box.set_visible(present)
+            if not present:
+                return
             battery_icon.set_from_icon_name(icon_name, 14)
             battery_label.set_label(percent_text)
+            battery_box.set_tooltip_text(tooltip_text)
 
         battery_label.build(
             lambda lbl: Fabricator(

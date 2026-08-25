@@ -10,7 +10,7 @@
 # network fetch of the source itself).
 
 pkgname=fabric-d77
-pkgver=1.1.0
+pkgver=1.2.0
 pkgrel=1
 pkgdesc="GTK desktop shell for Wayland compositors, built on Fabric"
 arch=('any')

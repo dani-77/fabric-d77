@@ -584,15 +584,3 @@ tooltip>* {
     background-color: var(--ws-hover);
     border-color: var(--color6);
 }
-
-#ollama-chat-button {
-    padding: 0px 10px;
-    background-color: var(--module-bg);
-    color: var(--color6);
-    border: solid 1px transparent;
-}
-
-#ollama-chat-button:hover {
-    background-color: var(--ws-hover);
-    border-color: var(--color6);
-}

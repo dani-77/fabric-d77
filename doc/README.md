@@ -218,6 +218,12 @@ local [Ollama](https://ollama.com) instance: a status dot, a model picker
 that can pull new models on the fly, and a simple prompt/response chat
 backed by Ollama's HTTP API.
 
+There's deliberately no bar button for it — the feature isn't consistent or
+reliable enough yet to earn permanent bar real estate. It still ships and
+works the same as before; open it via the signal/keybind below (or run
+Ollama yourself and skip the popup entirely if you'd rather use `ollama run`
+or another client).
+
 ### Requirements
 
 - A running Ollama instance reachable at `http://127.0.0.1:11434` (the

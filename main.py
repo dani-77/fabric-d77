@@ -39,16 +39,9 @@ class MainStatusBar(StatusBar):
             on_clicked=lambda *_: self.toggle_wallpaper_selector(),
         )
 
-        ollama_chat_button = Button(
-            name="ollama-chat-button",
-            child=Image(icon_name="chat-message-new-symbolic", icon_size=14),
-            on_clicked=lambda *_: self.ollama_chat.toggle(),
-        )
-
         current_left = list(self.left_container.children)
         current_left.insert(0, launcher_button)
         current_left.insert(1, wallpaper_button)
-        current_left.insert(2, ollama_chat_button)
         self.left_container.children = current_left
 
         self.power_button = Button(

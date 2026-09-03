@@ -15,6 +15,12 @@ from fabric.widgets.wayland import WaylandWindow as Window
 from gi.repository import GLib, Gtk
 
 OLLAMA_BASE = "http://127.0.0.1:11434"
+# Keeps the model resident across a whole chat session instead of paying a
+# full reload on every single message (Ollama's own server-side default is
+# also 5min, chosen for the same reason). unload_model() forces it back out
+# as soon as the chat window closes, so nothing lingers loaded longer than
+# an actual open session — see OllamaChatWindow's close paths.
+CHAT_KEEP_ALIVE = "5m"
 STATUS_POLL_SECONDS = 5
 CONFIG_DIR = os.path.expanduser("~/.config/ollama-chat")
 CONFIG_FILE = os.path.join(CONFIG_DIR, "model.conf")
@@ -40,6 +46,20 @@ SIZE_TIERS = [
 _MODEL_SIZE_RE = re.compile(r":(\d+(?:\.\d+)?)b\b", re.IGNORECASE)
 
 
+def _cpu_has_integrated_radeon():
+    """AMD APUs report themselves in /proc/cpuinfo as e.g. "AMD Ryzen 7
+    5825U with Radeon Graphics" — AMD's standard marketing suffix across
+    nearly all their iGPU-equipped CPU lines. This is a more reliable
+    integrated-vs-discrete signal than the GPU's own lspci description,
+    which often uses just a bare codename (e.g. "Barcelo") with neither
+    "Radeon" nor "Graphics" in it at all."""
+    try:
+        with open("/proc/cpuinfo") as f:
+            return "with radeon graphics" in f.read().lower()
+    except OSError:
+        return False
+
+
 def detect_gpu():
     """Best-effort dedicated GPU detection. Returns (vendor, vram_mb) or (None, 0)."""
     try:
@@ -55,6 +75,7 @@ def detect_gpu():
     except (FileNotFoundError, subprocess.SubprocessError, ValueError):
         pass
 
+    cpu_igpu = _cpu_has_integrated_radeon()
     try:
         result = subprocess.run(["lspci"], capture_output=True, text=True, timeout=5)
         for line in result.stdout.splitlines():
@@ -63,6 +84,15 @@ def detect_gpu():
                 continue
             if "intel" in lowered:
                 continue  # Intel iGPUs aren't dedicated
+            if "rx" not in lowered and (
+                ("radeon" in lowered and "graphics" in lowered)
+                or (cpu_igpu and ("amd" in lowered or "ati" in lowered))
+            ):
+                # Either self-described as integrated ("[Radeon Graphics]",
+                # no model number), or this CPU is a known Radeon-APU and
+                # nothing here says "rx" — treat as the CPU's own iGPU
+                # rather than a separate dedicated card.
+                continue
             vendor = "amd" if "amd" in lowered or "ati" in lowered else "gpu"
             return vendor, GPU_UNKNOWN_VRAM_MB
     except (FileNotFoundError, subprocess.SubprocessError):
@@ -98,6 +128,12 @@ class OllamaChat(Box):
         self.generating = False
         self.generation_cancelled = False
         self._chat_response = None
+        # Accumulated {"role": "user"/"assistant", "content": ...} turns,
+        # sent whole on every request via /api/chat so the model actually
+        # remembers earlier turns — /api/generate (used before) only ever
+        # saw the latest prompt in isolation. Cleared when the window closes
+        # (see unload_model's caller), so a freshly opened chat starts clean.
+        self.messages = []
 
         self.gpu_vendor = None
         self.gpu_vram_mb = 0
@@ -135,8 +171,17 @@ class OllamaChat(Box):
         header.add(Label(label="Ollama"))
         header.add(self.model_combo)
 
-        self.output = Label(label="", line_wrap="word", h_align="start")
-        self.output.set_selectable(True)
+        # Gtk.TextView + TextBuffer, not a Label: appending a streamed token
+        # only inserts at the end (O(new text)), instead of Label.set_label
+        # re-wrapping the *entire* accumulated reply on every single token
+        # (increasingly slow as a response grows — see append_text below).
+        self.output = Gtk.TextView()
+        self.output.set_editable(False)
+        self.output.set_cursor_visible(False)
+        self.output.set_wrap_mode(Gtk.WrapMode.WORD)
+        self.output.set_left_margin(4)
+        self.output.set_right_margin(4)
+        self.output_buffer = self.output.get_buffer()
         self.scroll = ScrolledWindow(
             child=self.output,
             min_content_size=(360, 320),
@@ -460,20 +505,28 @@ class OllamaChat(Box):
             return
         entry.set_text("")
         self.append_text(f"\n> {prompt}\n")
+        self.messages.append({"role": "user", "content": prompt})
         self.generating = True
         self.generation_cancelled = False
         self.show_stop_button()
-        threading.Thread(target=self.query_ollama, args=(prompt,), daemon=True).start()
+        threading.Thread(target=self.query_ollama, daemon=True).start()
 
-    def query_ollama(self, prompt):
+    def reset_conversation(self):
+        self.messages = []
+        self.output_buffer.set_text("")
+
+    def query_ollama(self):
         self._chat_response = None
+        reply_parts = []
         try:
             resp = requests.post(
-                f"{OLLAMA_BASE}/api/generate",
-                # keep_alive=0 unloads the model right after this reply
-                # instead of idling on Ollama's server-side 5min default —
-                # keeps it strictly load-on-demand.
-                json={"model": self.current_model, "prompt": prompt, "stream": True, "keep_alive": 0},
+                f"{OLLAMA_BASE}/api/chat",
+                json={
+                    "model": self.current_model,
+                    "messages": self.messages,
+                    "stream": True,
+                    "keep_alive": CHAT_KEEP_ALIVE,
+                },
                 stream=True,
                 timeout=60,
             )
@@ -489,7 +542,15 @@ class OllamaChat(Box):
                 if "error" in chunk:
                     self.append_text(f"\n[model error: {chunk['error']}]\n")
                     return
-                self.append_text(chunk.get("response", ""))
+                piece = chunk.get("message", {}).get("content", "")
+                reply_parts.append(piece)
+                self.append_text(piece)
+            # Record the assistant's full reply so the next turn's request
+            # actually includes it — the user's turn was already appended
+            # in on_submit before this thread started.
+            full_reply = "".join(reply_parts)
+            if full_reply:
+                self.messages.append({"role": "assistant", "content": full_reply})
 
         except requests.exceptions.ConnectionError:
             if self.generation_cancelled:
@@ -514,8 +575,46 @@ class OllamaChat(Box):
             GLib.idle_add(self.hide_stop_button)
 
     def append_text(self, text):
-        current = self.output.get_label() or ""
-        self.output.set_label(current + text)
+        # Called both from the main thread (on_submit, for the "> prompt"
+        # echo) and from query_ollama's background thread (for streamed
+        # tokens) — GLib.idle_add is what actually makes the latter safe:
+        # GTK widgets may only be touched from the main loop. (The old
+        # Label.set_label version skipped this, which happened to work in
+        # practice but was relying on luck, not a guarantee.)
+        GLib.idle_add(self._append_text_ui, text)
+
+    def _append_text_ui(self, text):
+        self.output_buffer.insert(self.output_buffer.get_end_iter(), text)
+        # Keep the newest output in view as the model streams — the same
+        # behavior quickshell-d77/utumno's OllamaChat.qml already has via
+        # its Flickable's onContentHeightChanged. Deliberately NOT
+        # scroll_to_iter(): called once per streamed token during a fast
+        # response, it segfaulted fabric-d77 after a few exchanges (a known
+        # rough edge — TextView's line/height cache isn't necessarily valid
+        # yet for an iter this soon after insert(), especially called this
+        # often). Driving the ScrolledWindow's own vadjustment instead
+        # never touches a TextIter, so it doesn't hit that.
+        adj = self.scroll.get_vadjustment()
+        adj.set_value(adj.get_upper() - adj.get_page_size())
+        return False
+
+    def unload_model(self):
+        """Fire-and-forget request to drop the model from memory right away,
+        instead of waiting out CHAT_KEEP_ALIVE. Called when the chat window
+        closes, so a model never stays resident longer than an actual open
+        session — a request with keep_alive=0 and no prompt just unloads,
+        it doesn't generate anything."""
+        def _unload():
+            try:
+                requests.post(
+                    f"{OLLAMA_BASE}/api/generate",
+                    json={"model": self.current_model, "keep_alive": 0},
+                    timeout=5,
+                )
+            except requests.exceptions.RequestException:
+                pass
+
+        threading.Thread(target=_unload, daemon=True).start()
 
 
 class OllamaChatWindow(Window):
@@ -549,7 +648,7 @@ class OllamaChatWindow(Window):
                             Button(
                                 image=Image(icon_name="window-close"),
                                 tooltip_text="Exit",
-                                on_clicked=lambda *_: self.set_visible(False),
+                                on_clicked=lambda *_: self.close_chat(),
                             ),
                         ],
                     ),
@@ -557,12 +656,21 @@ class OllamaChatWindow(Window):
                 ],
             )
         )
-        self.add_keybinding("escape", lambda *_: self.set_visible(False))
+        self.add_keybinding("escape", lambda *_: self.close_chat())
         self.show_all()
+
+    def close_chat(self):
+        """Hides the window, drops the model from memory right away instead
+        of leaving it resident for the rest of CHAT_KEEP_ALIVE with nobody
+        chatting to it, and resets the conversation — a freshly reopened
+        chat starts clean rather than silently continuing a stale one."""
+        self.chat.unload_model()
+        self.chat.reset_conversation()
+        self.set_visible(False)
 
     def toggle(self):
         if self.get_visible():
-            self.set_visible(False)
+            self.close_chat()
         else:
             # Deferred via idle_add: opening this overlay-layer window and
             # grabbing keyboard focus on self.chat.entry synchronously inside

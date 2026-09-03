@@ -215,8 +215,12 @@ bindsym $mod+t exec fabric-d77-signal RTMIN+8
 
 `ollama_chat.py` adds a small popup (`OllamaChatWindow`) for chatting with a
 local [Ollama](https://ollama.com) instance: a status dot, a model picker
-that can pull new models on the fly, and a simple prompt/response chat
-backed by Ollama's HTTP API.
+that can pull new models on the fly, and a real multi-turn chat (via
+`/api/chat`, with the full conversation history sent on every request, so
+the model actually remembers earlier turns) backed by Ollama's HTTP API.
+The model stays loaded for the rest of the session (`keep_alive: 5m`)
+instead of reloading from scratch on every message, and is explicitly
+unloaded the moment the popup closes.
 
 There's deliberately no bar button for it — the feature isn't consistent or
 reliable enough yet to earn permanent bar real estate. It still ships and
@@ -259,7 +263,11 @@ best-fitting *already installed* model instead of always defaulting to
 - If that's unavailable, it falls back to `lspci`, flagging any non-Intel
   VGA/3D controller as a dedicated GPU (VRAM assumed conservatively, since
   there's no universal way to query it without vendor tooling like
-  `rocm-smi`).
+  `rocm-smi`) — except AMD integrated graphics, which `lspci` doesn't
+  reliably self-describe (a Ryzen APU's VGA line can be just a bare
+  codename like `[AMD/ATI] Barcelo`, no "Radeon"/"Graphics" in it). Those
+  are caught by cross-checking `/proc/cpuinfo` for AMD's "with Radeon
+  Graphics" marketing suffix, present on nearly every iGPU-equipped Ryzen.
 - No dedicated GPU found → treated as CPU-only, suggesting the smallest
   installed model.
 

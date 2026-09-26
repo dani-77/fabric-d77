@@ -11,12 +11,14 @@ d77-shell is a simple GTK desktop shell built on top of Fabric and Python.
 
 ### Option A: Arch package (recommended)
 
-A `PKGBUILD` is included that installs every Python dependency as a real
+Published in the AUR as [`fabric-d77`](https://aur.archlinux.org/packages/fabric-d77);
+`packaging/arch/PKGBUILD` is the same file. Every Python dependency is a real
 system package (repo + AUR) — no venv, no pip, nothing fetched at runtime.
 
 ```
-git clone https://github.com/dani-77/fabric-d77.git
-cd fabric-d77
+yay -S fabric-d77
+# or, from this repo:
+cd packaging/arch
 makepkg -si
 ```
 
@@ -28,7 +30,8 @@ config (e.g. `exec fabric-d77` in Hyprland/sway).
 
 ### Option B: Void Linux package (no venv)
 
-`xbps-src` templates live under `void/srcpkgs/` for the same no-venv,
+`xbps-src` templates live under `void/srcpkgs/` (copies of the ones in
+[`d77void/srcpkgs-d77`](https://github.com/d77void/srcpkgs-d77)) for the same no-venv,
 system-package install on Void Linux. See [`void/README.md`](void/README.md)
 for how to drop them into a `void-packages` checkout and build with
 `xbps-src`.

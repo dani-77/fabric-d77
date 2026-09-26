@@ -37,9 +37,17 @@ and Python.
 
 ### Arch Linux (recommended)
 
+Available in the AUR as [`fabric-d77`](https://aur.archlinux.org/packages/fabric-d77):
+
+```sh
+yay -S fabric-d77
+```
+
+Or build it with the same `PKGBUILD` from this repo:
+
 ```sh
 git clone https://github.com/dani-77/fabric-d77.git
-cd fabric-d77
+cd fabric-d77/packaging/arch
 makepkg -si
 ```
 

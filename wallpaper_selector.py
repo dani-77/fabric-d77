@@ -5,10 +5,12 @@ from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
+from fabric.widgets.scale import Scale
 from fabric.widgets.scrolledwindow import ScrolledWindow
 from fabric.widgets.wayland import WaylandWindow as Window
 from gi.repository import GLib
 
+import theme
 import wallpaper_state
 
 # Wallpaper directory. Change this path if yours is different.
@@ -81,12 +83,41 @@ class WallpaperSelector(Window):
             on_clicked=lambda *_: self.clear_wallpaper(),
         )
 
+        # Palette mix: 0 = style.css colors, 1 = matugen palette of the
+        # current wallpaper. Restyles live while dragging (see theme.py).
+        self.mix_scale = Scale(
+            name="wallpaper-mix-scale",
+            value=theme.get_mix(),
+            min_value=0.0,
+            max_value=1.0,
+            increments=(0.05, 0.1),
+            draw_value=False,
+            orientation="h",
+        )
+        self.mix_label = Label(
+            name="wallpaper-mix-label",
+            label=self._mix_text(theme.get_mix()),
+        )
+        self.mix_scale.connect("value-changed", self._on_mix_changed)
+        self.mix_row = Box(
+            name="wallpaper-mix",
+            orientation="h",
+            spacing=6,
+            tooltip_text="Theme: style colors ⟷ wallpaper colors",
+            children=[
+                Label(name="wallpaper-mix-icon", label="󰏘"),
+                self.mix_scale,
+                self.mix_label,
+            ],
+        )
+
         self.header_row = Box(
             orientation="h",
             spacing=8,
             children=[
                 self.title_label,
                 Box(h_expand=True),
+                self.mix_row,
                 self.clear_button,
             ],
         )
@@ -110,6 +141,22 @@ class WallpaperSelector(Window):
         print("[wallpaper_selector] __init__: calling show_all()")
         self.show_all()
         print("[wallpaper_selector] __init__: done")
+
+    # -- palette mix ----------------------------------------------------
+
+    @staticmethod
+    def _mix_text(value: float) -> str:
+        return f"{round(value * 100)}%"
+
+    def _on_mix_changed(self, scale):
+        value = scale.get_value()
+        self.mix_label.set_label(self._mix_text(value))
+        theme.set_mix(value)
+
+    def _sync_mix_row(self):
+        # Dimmed while there's no palette for the current wallpaper (no
+        # wallpaper, or matugen missing): the slider would do nothing.
+        self.mix_row.set_opacity(1.0 if theme.palette_valid() else 0.5)
 
     # -- listing / grid -------------------------------------------------
 
@@ -200,6 +247,7 @@ class WallpaperSelector(Window):
             return
 
         wallpaper_state.write_current(path)
+        theme.generate_palette(path)
         self.current_wallpaper = path
         self.title_label.set_label(f"Wallpapers — {os.path.basename(path)}")
         # re-render to highlight the selected thumbnail
@@ -221,6 +269,8 @@ class WallpaperSelector(Window):
             return
 
         wallpaper_state.clear_current()
+        # The palette's source no longer matches: fall back to style.css.
+        theme.refresh()
         self.current_wallpaper = None
         self.title_label.set_label("Wallpapers")
         GLib.idle_add(self.populate)
@@ -230,6 +280,7 @@ class WallpaperSelector(Window):
         """Repopulates the grid (call on reopen to pick up new files)."""
         self.populate()
         self.show_all()
+        self._sync_mix_row()
 
     def toggle(self):
         if self.get_visible():

@@ -34,6 +34,7 @@ optdepends=(
   'xdg-user-dirs: locate the music folder'
   'xdg-terminal-exec: pick the default terminal when $TERMINAL is unset'
   'ollama: backend for the Ollama Chat popup'
+  'matugen: wallpaper-based color palette'
 )
 backup=('etc/pam.d/fabric-d77')
 # No upstream release tags yet: pinned to the same commit as the Void template

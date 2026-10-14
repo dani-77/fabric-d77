@@ -27,6 +27,14 @@
     --ws-empty: var(--color8);
     --ws-hover: var(--color1);
     --ws-urgent: var(--color12);
+    /* Status/accent colors used outside the base palette (clear button,
+       ollama status, selected wallpaper). Like everything above, these
+       hex values are the fallback and are blended toward the wallpaper
+       palette by theme.py (see VAR_MAP there). */
+    --red: #f7768e;
+    --green: #9ece6a;
+    --comment: #565f89;
+    --thumb-selected: #88c0d0;
 }
 
 * {
@@ -387,7 +395,7 @@ tooltip>* {
 }
 
 #wallpaper-thumb-selected {
-	border: 2px solid #88c0d0;
+	border: 2px solid var(--thumb-selected);
 }
 
 #wallpaper-thumb-label {
@@ -399,13 +407,50 @@ tooltip>* {
 	padding: 4px 10px;
 	border-radius: 6px;
 	background-color: transparent;
-	color: #f7768e;
-	border: solid 1px rgba(247, 118, 142, 0.4);
+	color: var(--red);
+	border: solid 1px alpha(var(--red), 0.4);
 }
 
 #wallpaper-clear-button:hover {
-	background-color: rgba(247, 118, 142, 0.18);
-	border-color: #f7768e;
+	background-color: alpha(var(--red), 0.18);
+	border-color: var(--red);
+}
+
+/* Palette mix slider (style colors <-> wallpaper colors). */
+#wallpaper-mix-icon {
+	font-family: "JetBrainsMono Nerd Font";
+	font-size: 14px;
+	color: var(--color6);
+}
+
+#wallpaper-mix-scale {
+	min-width: 120px;
+}
+
+#wallpaper-mix-scale trough {
+	min-height: 4px;
+	border-radius: 100px;
+	background-color: var(--module-bg);
+}
+
+#wallpaper-mix-scale highlight {
+	min-height: 4px;
+	border-radius: 100px;
+	background-color: var(--color6);
+}
+
+#wallpaper-mix-scale slider {
+	min-width: 12px;
+	min-height: 12px;
+	margin: -4px;
+	border-radius: 100px;
+	background-color: var(--foreground);
+}
+
+#wallpaper-mix-label {
+	font-size: 11px;
+	min-width: 34px;
+	color: var(--color8);
 }
 
 /* ── Info Dashboard (SIGRTMIN+7) ──────────────────────────────────────────── */
@@ -528,15 +573,15 @@ tooltip>* {
 
 /* Ollama status indicator */
 #ollama-status.status-up {
-    color: #9ece6a;
+    color: var(--green);
 }
 
 #ollama-status.status-down {
-    color: #f7768e;
+    color: var(--red);
 }
 
 #ollama-status.status-unknown {
-    color: #565f89;
+    color: var(--comment);
 }
 
 /* ── Lock screen (ext-session-lock-v1 via GtkSessionLock, SIGRTMIN+8) ─────── */

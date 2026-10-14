@@ -6,7 +6,7 @@ revision=2
 depends="python3 python3-gobject python3-cairo python3-cffi python3-click
  python3-loguru python3-Pillow python3-psutil python3-rapidfuzz
  python3-requests python3-setproctitle python3-six python3-pam python3-thefuzz
- fabric gtk-session-lock alsa-utils brightnessctl"
+ fabric gtk-session-lock alsa-utils brightnessctl matugen"
 short_desc="GTK desktop shell for Wayland compositors, built on Fabric"
 maintainer="Daniel Azevedo <daniazevedo77@gmail.com>"
 license="MIT"
@@ -25,6 +25,7 @@ do_install() {
 	vmkdir usr/share/fabric-d77
 	vcopy "*.py" usr/share/fabric-d77
 	vcopy assets usr/share/fabric-d77
+	vcopy theme usr/share/fabric-d77
 	vcopy style.css usr/share/fabric-d77
 
 	vbin ${FILESDIR}/fabric-d77

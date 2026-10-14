@@ -17,6 +17,7 @@ from music_picker import MusicPicker
 from backdrop import Backdrop
 from lockscreen import LockScreen
 from ollama_chat import OllamaChatWindow
+import theme
 
 class MainStatusBar(StatusBar):
     def __init__(self, launcher_window: AppLauncher, wallpaper_selector: WallpaperSelector, session_menu: SessionMenu, osd: OSD, ollama_chat: OllamaChatWindow):
@@ -137,6 +138,7 @@ if __name__ == "__main__":
 
     style_path = get_relative_path("./style.css")
     if os.path.exists(style_path):
-        app.set_stylesheet_from_file(style_path)
+        # style.css colors blended with the wallpaper palette (theme.py).
+        theme.init(app, style_path)
 
     app.run()

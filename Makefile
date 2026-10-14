@@ -12,7 +12,7 @@ SHARE_DIR  ?= /usr/share/fabric-d77
 .PHONY: install uninstall
 
 # Mirrors what srcpkgs/fabric-d77/template's do_install() actually ships
-# (vcopy "*.py" + assets + style.css, plus the two /usr/bin wrappers and the
+# (vcopy "*.py" + assets + theme + style.css, plus the two /usr/bin wrappers and the
 # PAM file) — this used to only install the PAM file and fabric-d77-signal,
 # silently leaving the *.py shell code (main.py, ollama_chat.py, ...)
 # unsynced: `sudo make install` looked like a full deploy but never touched
@@ -24,6 +24,7 @@ install:
 	install -d $(DESTDIR)$(SHARE_DIR)
 	install -m644 *.py $(DESTDIR)$(SHARE_DIR)/
 	cp -a assets $(DESTDIR)$(SHARE_DIR)/
+	cp -a theme $(DESTDIR)$(SHARE_DIR)/
 	install -m644 style.css $(DESTDIR)$(SHARE_DIR)/
 
 uninstall:

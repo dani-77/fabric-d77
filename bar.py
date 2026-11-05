@@ -82,6 +82,9 @@ def _create_workspaces_widget(**kwargs):
     if compositor == "niri":
         from niri import NiriWorkspaces
         return NiriWorkspaces(**kwargs)
+    from ext_workspace import ExtWorkspaces, get_ext_workspace_connection
+    if get_ext_workspace_connection().available:
+        return ExtWorkspaces(**kwargs)
     # Unsupported compositor — caller should check for None and skip the widget.
     return None
 

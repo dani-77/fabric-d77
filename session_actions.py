@@ -37,9 +37,9 @@ def logout():
     elif os.environ.get("SWAYSOCK"):
         os.system("swaymsg exit")
     else:
-        session_id = os.environ.get("XDG_SESSION_ID", "")
-        cmd = f"loginctl terminate-session {session_id}" if session_id else "pkill -KILL -u $USER"
-        os.system(cmd)
+        # Only ever this session: the user may have others open on other VTs.
+        session_id = os.environ.get("XDG_SESSION_ID") or "self"
+        os.system(f"loginctl terminate-session {session_id}")
 
 
 def _power(action: str):

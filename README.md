@@ -127,6 +127,10 @@ bindl  = , SUPER, O, exec, fabric-d77-signal RTMIN+9
 > a raw `pgrep`/`kill` command straight from an idle daemon has a known
 > footgun.
 
+On wasp and spitfire, [Kantele](https://github.com/dani-77/kantele) can set up the
+same keys for all the d77 shells: see its
+[shell keys map](https://github.com/dani-77/kantele/blob/main/doc/shell-keys.md).
+
 ## More
 
 For requirements, troubleshooting, and how each feature (lock screen, OSD,

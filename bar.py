@@ -147,11 +147,27 @@ class VolumeWidget(Box):
         self.icon.set_from_icon_name(icon_name, 14)
 
 
-def get_wifi_details():
+def get_network_details():
     try:
         net_root = "/sys/class/net"
+        interfaces = os.listdir(net_root)
+
+        # Match utumno: an active physical Ethernet link always wins over
+        # Wi-Fi when both happen to be connected.
+        for iface in interfaces:
+            iface_path = os.path.join(net_root, iface)
+            if iface == "lo" or os.path.isdir(os.path.join(iface_path, "wireless")):
+                continue
+            if not os.path.exists(os.path.join(iface_path, "device")):
+                continue
+            carrier = os.path.join(iface_path, "carrier")
+            if os.path.isfile(carrier):
+                with open(carrier) as carrier_file:
+                    if carrier_file.read().strip() == "1":
+                        return "network-wired-symbolic", "wired"
+
         iface = next(
-            (e for e in os.listdir(net_root)
+            (e for e in interfaces
              if os.path.isdir(os.path.join(net_root, e, "wireless"))),
             None,
         )
@@ -317,15 +333,18 @@ class StatusBar(Window):
             child=wifi_content,
             on_button_press_event=lambda *_: _launch_nmtui(),
         )
+        wifi_box.set_visible(False)
+
         def update_wifi(_, info):
             icon_name, text = info
             wifi_icon.set_from_icon_name(icon_name, 14)
             wifi_label.set_label(text)
+            wifi_box.set_visible(True)
 
         wifi_label.build(
             lambda lbl: Fabricator(
                 interval=4000,
-                poll_from=lambda f: get_wifi_details(),
+                poll_from=lambda f: get_network_details(),
                 on_changed=update_wifi,
             )
         )
@@ -338,6 +357,7 @@ class StatusBar(Window):
             child=battery_content,
             on_button_press_event=lambda *_: self.osd.power_profile_cycle() if self.osd else None,
         )
+        battery_box.set_visible(False)
 
         def update_battery(_, info):
             icon_name, percent_text, tooltip_text, present = info

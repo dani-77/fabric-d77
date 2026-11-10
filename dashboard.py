@@ -61,22 +61,9 @@ def _fetch_weather_sync() -> str:
 
 
 def _get_net_status() -> tuple[str, str]:
-    """Returns (icon_name, label). Checks WiFi then Ethernet."""
+    """Returns (icon_name, label), preferring Ethernet as the bar does."""
     try:
         net_root = "/sys/class/net"
-        for iface in os.listdir(net_root):
-            if os.path.isdir(os.path.join(net_root, iface, "wireless")):
-                out = subprocess.run(
-                    ["iw", "dev", iface, "link"],
-                    stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
-                ).stdout
-                for line in out.splitlines():
-                    line = line.strip()
-                    if line.startswith("SSID:"):
-                        ssid = line.split(":", 1)[1].strip()
-                        if len(ssid) > 22:
-                            ssid = ssid[:20] + "…"
-                        return "network-wireless-symbolic", f"Connected to {ssid}"
         for iface in os.listdir(net_root):
             if iface == "lo":
                 continue
@@ -90,6 +77,19 @@ def _get_net_status() -> tuple[str, str]:
                 with open(carrier) as f:
                     if f.read().strip() == "1":
                         return "network-wired-symbolic", f"Connected ({iface})"
+        for iface in os.listdir(net_root):
+            if os.path.isdir(os.path.join(net_root, iface, "wireless")):
+                out = subprocess.run(
+                    ["iw", "dev", iface, "link"],
+                    stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
+                ).stdout
+                for line in out.splitlines():
+                    line = line.strip()
+                    if line.startswith("SSID:"):
+                        ssid = line.split(":", 1)[1].strip()
+                        if len(ssid) > 22:
+                            ssid = ssid[:20] + "…"
+                        return "network-wireless-symbolic", f"Connected to {ssid}"
     except Exception:
         pass
     return "network-wireless-offline-symbolic", "Network configuration"

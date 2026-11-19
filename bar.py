@@ -293,7 +293,7 @@ def get_battery_info():
 
 
 class StatusBar(Window):
-    def __init__(self, osd=None):
+    def __init__(self, osd=None, monitor=None):
         self.osd = osd
         super().__init__(
             name="bar",
@@ -302,6 +302,7 @@ class StatusBar(Window):
             margin="10px 10px -2px 10px",
             exclusivity="auto",
             visible=False,
+            monitor=monitor,
         )
         cpu_icon = Image(icon_name="cpu-symbolic", icon_size=14)
         cpu_label = Label(name="cpu-label", label="0%")

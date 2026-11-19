@@ -22,7 +22,7 @@ from loguru import logger
 
 from fabric.core.service import Service, Signal
 from fabric.core.widgets import WorkspaceButton, Workspaces
-from gi.repository import Gdk, GLib
+from gi.repository import Gdk, Gio, GLib
 
 WL_DISPLAY_ID = 1
 WL_DISPLAY_SYNC = 0
@@ -49,6 +49,7 @@ GROUP_EVENT_REMOVED = 5
 
 WORKSPACE_DESTROY = 0
 WORKSPACE_ACTIVATE = 1
+WORKSPACE_EVENT_ID = 0
 WORKSPACE_EVENT_NAME = 1
 WORKSPACE_EVENT_COORDINATES = 2
 WORKSPACE_EVENT_STATE = 3
@@ -83,6 +84,8 @@ def _read_string(payload: bytes, offset: int = 0) -> tuple[str, int]:
 class WorkspaceHandle:
     def __init__(self, object_id: int):
         self.object_id = object_id
+        # The compositor's own id ("whiplash-3", "eDP-1-3"), empty if not sent.
+        self.ws_id = ""
         self.name = ""
         self.coordinates: tuple[int, ...] = ()
         self.state = 0
@@ -134,7 +137,50 @@ class ExtWorkspace(Service):
         self._outputs: dict[int, int] = {}
         self.groups: dict[int, WorkspaceGroup] = {}
         self.workspaces: dict[int, WorkspaceHandle] = {}
+        # Window counts by ext-workspace id, or None when the compositor
+        # publishes none (see _watch_window_counts).
+        self.window_counts: dict[str, int] | None = None
+        self._counts_monitor: Gio.FileMonitor | None = None
         self._connect()
+        self._watch_window_counts()
+
+    def _watch_window_counts(self):
+        """Follow the window counts the d77 compositors publish.
+
+        ext-workspace has no "occupied" state, so whiplash, wasp and spitfire
+        write one line per workspace, "<ext-workspace id> <window count>", to
+        $XDG_RUNTIME_DIR/d77-workspaces-$WAYLAND_DISPLAY (replaced atomically).
+        """
+        runtime_dir = os.environ.get("XDG_RUNTIME_DIR", "")
+        display = os.environ.get("WAYLAND_DISPLAY", "")
+        if not runtime_dir or not display:
+            return
+        path = os.path.join(runtime_dir, f"d77-workspaces-{display}")
+        self._read_window_counts(path)
+        self._counts_monitor = Gio.File.new_for_path(path).monitor_file(Gio.FileMonitorFlags.WATCH_MOVES, None)
+        self._counts_monitor.connect("changed", lambda *_: self._on_counts_changed(path))
+
+    def _read_window_counts(self, path: str):
+        try:
+            with open(path) as f:
+                counts = {}
+                for line in f:
+                    parts = line.split()
+                    if len(parts) == 2 and parts[1].isdigit():
+                        counts[parts[0]] = int(parts[1])
+                self.window_counts = counts
+        except OSError:
+            self.window_counts = None
+
+    def _on_counts_changed(self, path: str):
+        self._read_window_counts(path)
+        self.workspaces_changed()
+
+    def is_empty(self, workspace: WorkspaceHandle) -> bool:
+        """True only when the compositor says the workspace has no windows."""
+        if self.window_counts is None or not workspace.ws_id:
+            return False
+        return self.window_counts.get(workspace.ws_id, 1) == 0
 
     def _connect(self):
         runtime_dir = os.environ.get("XDG_RUNTIME_DIR", "")
@@ -316,7 +362,9 @@ class ExtWorkspace(Service):
             group.workspaces.discard(target)
 
     def _handle_workspace(self, workspace: WorkspaceHandle, opcode: int, payload: bytes):
-        if opcode == WORKSPACE_EVENT_NAME:
+        if opcode == WORKSPACE_EVENT_ID:
+            workspace.ws_id, _ = _read_string(payload)
+        elif opcode == WORKSPACE_EVENT_NAME:
             workspace.name, _ = _read_string(payload)
         elif opcode == WORKSPACE_EVENT_COORDINATES:
             data, _ = _read_bytes(payload)
@@ -429,6 +477,12 @@ class ExtWorkspaces(Workspaces):
                 button.active = workspace.active
             if button.urgent != workspace.urgent:
                 button.urgent = workspace.urgent
+            # WorkspaceButton starts out empty; only the compositor's window
+            # counts may say a workspace really is (otherwise none is dimmed).
+            # The active or urgent state always shows, empty or not.
+            empty = self.connection.is_empty(workspace) and not workspace.active and not workspace.urgent
+            if button.empty != empty:
+                button.empty = empty
 
     def _activate_relative(self, step: int):
         active = next((i for i, w in enumerate(self._shown) if w.active), None)

@@ -6,6 +6,7 @@ from fabric import Application
 from fabric.widgets.button import Button
 from fabric.widgets.image import Image
 from fabric.utils import get_relative_path
+from gi.repository import Gdk  # after fabric, which pins GTK/GDK 3
 
 from bar import StatusBar
 from launcher import AppLauncher
@@ -20,12 +21,12 @@ from ollama_chat import OllamaChatWindow
 import theme
 
 class MainStatusBar(StatusBar):
-    def __init__(self, launcher_window: AppLauncher, wallpaper_selector: WallpaperSelector, session_menu: SessionMenu, osd: OSD, ollama_chat: OllamaChatWindow):
+    def __init__(self, launcher_window: AppLauncher, wallpaper_selector: WallpaperSelector, session_menu: SessionMenu, osd: OSD, ollama_chat: OllamaChatWindow, monitor=None):
         self.launcher = launcher_window
         self.wallpaper_selector = wallpaper_selector
         self.session_menu = session_menu
         self.ollama_chat = ollama_chat
-        super().__init__(osd=osd)
+        super().__init__(osd=osd, monitor=monitor)
 
     def show_all(self):
         launcher_button = Button(
@@ -111,8 +112,36 @@ if __name__ == "__main__":
     ollama_chat = OllamaChatWindow()
     ollama_chat.set_visible(False)
 
-    bar = MainStatusBar(launcher_window=launcher, session_menu=session_menu, wallpaper_selector=wallpaper_selector, osd=osd, ollama_chat=ollama_chat)
-    app = Application("d77-shell", bar, launcher, session_menu, osd, wallpaper_selector, dashboard, backdrop, music_picker, ollama_chat)
+    # One bar per monitor, created and removed as monitors come and go; the
+    # launcher, menus and popups stay single and shared by every bar.
+    display = Gdk.Display.get_default()
+
+    def make_bar(monitor):
+        # Fabric's monitor property is an int: a Gdk.Monitor is silently
+        # dropped and the bar lands on whatever output the compositor picks.
+        index = next(i for i in range(display.get_n_monitors()) if display.get_monitor(i) == monitor)
+        return MainStatusBar(launcher_window=launcher, session_menu=session_menu, wallpaper_selector=wallpaper_selector, osd=osd, ollama_chat=ollama_chat, monitor=index)
+
+    bars = {}  # Gdk.Monitor -> its bar
+    for i in range(display.get_n_monitors()):
+        monitor = display.get_monitor(i)
+        bars[monitor] = make_bar(monitor)
+    # Signal handlers only need one bar: they reach the shared windows.
+    bar = next(iter(bars.values()))
+    app = Application("d77-shell", *bars.values(), launcher, session_menu, osd, wallpaper_selector, dashboard, backdrop, music_picker, ollama_chat)
+
+    def on_monitor_added(_display, monitor):
+        bars[monitor] = make_bar(monitor)
+        app.add_window(bars[monitor])  # it shows itself once built
+
+    def on_monitor_removed(_display, monitor):
+        gone = bars.pop(monitor, None)
+        if gone is not None:
+            app.remove_window(gone)
+            gone.destroy()
+
+    display.connect("monitor-added", on_monitor_added)
+    display.connect("monitor-removed", on_monitor_removed)
 
     signal.signal(signal.SIGUSR1, lambda signum, frame: bar.toggle_launcher())
     signal.signal(signal.SIGUSR2, lambda signum, frame: bar.popup_power_menu())

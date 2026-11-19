@@ -87,6 +87,7 @@
 
 #workspaces>button.empty {
     background-color: var(--ws-empty);
+    opacity: 0.4;
 }
 
 #system-status {

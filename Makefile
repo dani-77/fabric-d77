@@ -26,6 +26,9 @@ install:
 	cp -a assets $(DESTDIR)$(SHARE_DIR)/
 	cp -a theme $(DESTDIR)$(SHARE_DIR)/
 	install -m644 style.css $(DESTDIR)$(SHARE_DIR)/
+	install -Dm755 monitor/d77-monitor $(DESTDIR)$(SHARE_DIR)/monitor/d77-monitor
+	install -Dm644 monitor/eww.yuck $(DESTDIR)$(SHARE_DIR)/monitor/eww.yuck
+	install -Dm644 monitor/eww.scss $(DESTDIR)$(SHARE_DIR)/monitor/eww.scss
 
 uninstall:
 	rm -f $(DESTDIR)$(PAM_DIR)/fabric-d77

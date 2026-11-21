@@ -3,6 +3,7 @@ import psutil
 import re
 import subprocess
 from datetime import datetime
+from pathlib import Path
 
 # gi._propertyhelper on Python 3.14 doesn't support IntEnum types (e.g.
 # GtkLayerShell.Layer). Fall back to TYPE_PYOBJECT for unsupported types;
@@ -42,6 +43,11 @@ from fabric.utils import get_relative_path
 
 from dashboard import _launch_nmtui
 from osd import get_power_profile
+
+
+def _toggle_system_monitor(mode: str) -> None:
+    script = Path(__file__).resolve().parent / "monitor" / "d77-monitor"
+    subprocess.Popen([str(script), mode], start_new_session=True)
 
 
 def _detect_compositor() -> str:
@@ -306,7 +312,11 @@ class StatusBar(Window):
         )
         cpu_icon = Image(icon_name="cpu-symbolic", icon_size=14)
         cpu_label = Label(name="cpu-label", label="0%")
-        cpu_box = Box(spacing=4, orientation="h", children=[cpu_icon, cpu_label])
+        cpu_box = EventBox(
+            events="button-press",
+            child=Box(spacing=4, orientation="h", children=[cpu_icon, cpu_label]),
+            on_button_press_event=lambda *_: _toggle_system_monitor("cpu"),
+        )
         cpu_label.build(
             lambda lbl: Fabricator(
                 interval=1000,
@@ -317,7 +327,11 @@ class StatusBar(Window):
 
         ram_icon = Image(icon_name="ram-symbolic", icon_size=14)
         ram_label = Label(name="ram-label", label="0%")
-        ram_box = Box(spacing=4, orientation="h", children=[ram_icon, ram_label])
+        ram_box = EventBox(
+            events="button-press",
+            child=Box(spacing=4, orientation="h", children=[ram_icon, ram_label]),
+            on_button_press_event=lambda *_: _toggle_system_monitor("memory"),
+        )
         ram_label.build(
             lambda lbl: Fabricator(
                 interval=2000,

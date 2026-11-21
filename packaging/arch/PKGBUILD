@@ -40,7 +40,7 @@ optdepends=(
 )
 backup=('etc/pam.d/fabric-d77')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/$pkgver.tar.gz")
-sha256sums=('SKIP')
+sha256sums=('931401a6b1dfdbc6b97e4ca48f88e1fa273dfbd3395f03c269f166f075d5010c')
 
 package() {
     cd "$pkgname-$pkgver"

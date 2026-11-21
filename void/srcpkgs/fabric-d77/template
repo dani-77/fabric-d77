@@ -13,7 +13,7 @@ license="MIT"
 homepage="https://github.com/dani-77/fabric-d77"
 
 distfiles="https://github.com/dani-77/fabric-d77/archive/refs/tags/${version}.tar.gz"
-checksum=SKIP
+checksum=931401a6b1dfdbc6b97e4ca48f88e1fa273dfbd3395f03c269f166f075d5010c
 repository=d77
 
 do_install() {

@@ -29,7 +29,7 @@ compositor doesn't give you out of the box:
 - A **wallpaper picker**.
 - A small **Ollama chat** popup for talking to a local AI model.
 - A **power/session menu** and **dashboard**.
-- A centered **system monitor**: click CPU or RAM in the bar to toggle the shared Eww panel, backed by `dgop` and the Matugen palette.
+- A centered **system monitor**: click CPU or RAM in the bar to toggle the shared Eww panel, backed by `dgop` (or `atop` where there is no `dgop`) and the Matugen palette.
 
 It's built on **[Fabric](https://github.com/Fabric-Development/fabric)**
 and Python.

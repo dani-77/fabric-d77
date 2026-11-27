@@ -71,7 +71,7 @@ latter on first run if neither exists.
 
 The shell bundles a minimalist **OSD (On-Screen Display)** overlay (`osd.py`),
 inspired by the equivalent module in
-[quickshell-d77](https://github.com/dani-77/quickshell-d77). A small popup
+[quickshell-d77](https://github.com/dani-77/quickshell-d77) (archived; superseded by [Utumno](https://github.com/dani-77/utumno)). A small popup
 (icon + progress bar + percentage) appears in the **top-right corner** whenever
 the volume or screen brightness changes, and fades out after ~2.5 s.
 
@@ -132,7 +132,7 @@ You can tweak the step, timeout, mixer control and poll interval at the top of
 
 `lockscreen.py` implements a **native locker** for the shell — no dependency
 on swaylock/hyprlock — mirroring how the lockscreen was built in
-[quickshell-d77](https://github.com/dani-77/quickshell-d77) (there via
+[quickshell-d77](https://github.com/dani-77/quickshell-d77) (archived; superseded by [Utumno](https://github.com/dani-77/utumno); there via
 Quickshell's built-in `WlSessionLock`). It's backed by the same underlying
 mechanism: the **`ext-session-lock-v1`** Wayland protocol, via the
 [GtkSessionLock](https://github.com/Cu3PO42/gtk-session-lock) library (the
